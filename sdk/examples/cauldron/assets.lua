@@ -11,7 +11,7 @@ FloorBg = image{"images/Floor_BG.png"}
 Honey = image{"images/Ingredients/Honey.png", pinned=true}
 FrogLegs = image{"images/Ingredients/FrogLegs.png", pinned=true}
 Nightshade = image{"images/Ingredients/Nightshade.png", pinned=true}
-Lavender = image{"images/Ingredients/Honey.png", pinned=true}
+Lavender = image{"images/Ingredients/Lavender.png", pinned=true}
 
 DragonsBreath = image{"images/Ingredients/Dragon_sBreath.png", pinned=true}
 Heart = image{"images/Ingredients/Heart.png", pinned=true}
