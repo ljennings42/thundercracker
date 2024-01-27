@@ -5,7 +5,11 @@
 #include <sifteo.h>
 #include "assets.gen.h"
 
+#define INVENTORY_SIZE 3
+
 using namespace Sifteo;
+
+Random gRandom;
 
 static Metadata M = Metadata()
     .title("Cauldron Game")
@@ -51,7 +55,8 @@ public:
     struct Player {
         unsigned touch;
 
-        Ingredient ingredient;
+        Ingredient inventory[INVENTORY_SIZE];
+        unsigned selectedInventoryIndex;
     } players[CUBE_ALLOCATION];
 
     Ingredient pot_ingredients[CUBE_ALLOCATION] = {MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS};
@@ -74,23 +79,21 @@ private:
     void onConnect(unsigned id)
     {
         CubeID cube(id);
-        uint64_t hwid = cube.hwID();
 
         bzero(players[id]);
         LOG("Cube %d connected\n", id);
 
+        // init ingredients if player
+        if (id > 0) {
+            for (unsigned i = 0; i < INVENTORY_SIZE; i++) {
+                players[id].inventory[i] = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
+            }
+            players[id].selectedInventoryIndex = 0;
+        }
+
         vid[id].initMode(BG0_ROM);
         vid[id].attach(id);
         motion[id].attach(id);
-
-        // Draw the cube's identity
-        String<128> str;
-        if (id == 0) {
-            str << "CAULDRON\n";
-        } else {
-            str << "I am cube #" << cube << "\n";
-        }
-        vid[cube].bg0rom.text(vec(1,2), str);
 
         // Draw initial state for all sensors
         onAccelChange(cube);
@@ -158,7 +161,8 @@ private:
     }
 
     void onPlayerClicked(unsigned id) {
-        players[id].ingredient = (Ingredient) ((players[id].ingredient + 1) % MAX_INGREDIENTS);
+        players[id].selectedInventoryIndex++;
+        players[id].selectedInventoryIndex = players[id].selectedInventoryIndex % INVENTORY_SIZE;
     }
 
     void clearPotIngredients() {
@@ -237,7 +241,8 @@ private:
 
         if (id != 0) {
             // draw ingredient to player cube
-            String<16> str = ingredientToString(players[id].ingredient);
+            unsigned inventoryIndex = players[id].selectedInventoryIndex;
+            String<16> str = ingredientToString(players[id].inventory[inventoryIndex]);
             vid[id].bg0rom.text(vec(1,9), str);
         }
 
@@ -308,10 +313,12 @@ private:
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
         if (firstID == 0) {
-            pot_ingredients[secondID] = players[secondID].ingredient;
+            unsigned inventoryIndex = players[secondID].selectedInventoryIndex;
+            pot_ingredients[secondID] = players[secondID].inventory[inventoryIndex];
         }
         if (secondID == 0) {
-            pot_ingredients[firstID] = players[firstID].ingredient;
+            unsigned inventoryIndex = players[firstID].selectedInventoryIndex;
+            pot_ingredients[firstID] = players[firstID].inventory[inventoryIndex];
         }
 
         drawCauldronDebugIngredients();
