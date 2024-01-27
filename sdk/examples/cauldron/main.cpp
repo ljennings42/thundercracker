@@ -23,18 +23,16 @@ public:
     enum Ingredient {
         INGREDIENT_NONE = 0,
 
-        HEART_ORGAN,
-        DRAGONS_BREATH,
-        GARNET,
-        ROSE_PETALS,
-
-        LAVENDER,
         HONEY,
+        FROG_LEGS,
+        NIGHTSHADE,
+        LAVENDER,
+
+        DRAGONS_BREATH,
+        HEART_ORGAN,
         GRIFFON_FEATHER,
         HARPY_BLOOD,
         DREAM_CLOUDS,
-        FROG_LEGS,
-        NIGHTSHADE,
         COFFEE_BEANS,
 
         MAX_INGREDIENTS,
@@ -57,6 +55,8 @@ public:
 
         Ingredient leftItem;
         Ingredient rightItem;
+
+        Ingredient mixedItem;
     } players[CUBE_ALLOCATION];
 
     Ingredient pot_ingredients[CUBE_ALLOCATION] = {};
@@ -85,8 +85,8 @@ private:
 
         // init ingredients if player
         if (id > 0) {
-            players[id].leftItem = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
-            players[id].rightItem = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
+            players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
+            players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
 
         vid[id].initMode(BG0_ROM);
@@ -143,24 +143,30 @@ private:
         Neighborhood nb(cube);
         BG0ROMDrawable &draw = vid[cube].bg0rom;
 
-        // LEFT item
-        {
-            draw.fill(vec(0, 0), vec(8, 16), draw.BLUE | draw.SOLID_FG);
-            String<16> ingredientString = ingredientToString((players[id].leftItem));
-            String<16> str = subString(ingredientString, 0, 7);
-            String<16> str2 = subString(ingredientString, 7, 7);
-            vid[cube].bg0rom.text(vec(1, 4), str, draw.WHITE_ON_BLUE);
-            vid[cube].bg0rom.text(vec(1, 5), str2, draw.WHITE_ON_BLUE);
-        }
+        if (players[id].mixedItem) {
+            draw.fill(vec(0, 0), vec(16, 16), draw.BLACK | draw.SOLID_FG);
+            String<16> ingredientString = ingredientToString(players[id].mixedItem);
+            vid[cube].bg0rom.text(vec(1, 4), ingredientString, draw.WHITE_ON_BLACK);
+        } else {
+            // LEFT item
+            {
+                draw.fill(vec(0, 0), vec(8, 16), draw.BLUE | draw.SOLID_FG);
+                String<16> ingredientString = ingredientToString(players[id].leftItem);
+                String<16> str = subString(ingredientString, 0, 7);
+                String<16> str2 = subString(ingredientString, 7, 7);
+                vid[cube].bg0rom.text(vec(1, 4), str, draw.WHITE_ON_BLUE);
+                vid[cube].bg0rom.text(vec(1, 5), str2, draw.WHITE_ON_BLUE);
+            }
 
-        // RIGHT item
-        {
-            draw.fill(vec(8, 0), vec(8, 16), draw.GREEN | draw.SOLID_FG);
-            String<16> ingredientString = ingredientToString((players[id].rightItem));
-            String<16> str = subString(ingredientString, 0, 7);
-            String<16> str2 = subString(ingredientString, 7, 7);
-            vid[cube].bg0rom.text(vec(8, 4), str, draw.WHITE_ON_GREEN);
-            vid[cube].bg0rom.text(vec(8, 5), str2, draw.WHITE_ON_GREEN);
+            // RIGHT item
+            {
+                draw.fill(vec(8, 0), vec(8, 16), draw.GREEN | draw.SOLID_FG);
+                String<16> ingredientString = ingredientToString(players[id].rightItem);
+                String<16> str = subString(ingredientString, 0, 7);
+                String<16> str2 = subString(ingredientString, 7, 7);
+                vid[cube].bg0rom.text(vec(8, 4), str, draw.WHITE_ON_GREEN);
+                vid[cube].bg0rom.text(vec(8, 5), str2, draw.WHITE_ON_GREEN);
+            }
         }
 
         drawNeighbors(id);
@@ -169,21 +175,19 @@ private:
     String<16> ingredientToString(Ingredient ingredient) {
         String<16> str;
         switch (ingredient) {
-            case HEART_ORGAN:       str << "HEART_ORGAN\0"; break;
-            case DRAGONS_BREATH:    str << "DRAGONS_BREATH\0"; break;
-            case GARNET:            str << "GARNET\0"; break;
-            case ROSE_PETALS:       str << "ROSE_PETALS\0"; break;
-
-            case LAVENDER:          str << "LAVENDER\0"; break;
             case HONEY:             str << "HONEY\0"; break;
+            case FROG_LEGS:         str << "FROG_LEGS\0"; break;
+            case NIGHTSHADE:        str << "NIGHTSHADE\0"; break;
+            case LAVENDER:          str << "LAVENDER\0"; break;
+
+            case DRAGONS_BREATH:    str << "DRAGONS_BREATH\0"; break;
+            case HEART_ORGAN:       str << "HEART_ORGAN\0"; break;
             case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER\0"; break;
             case HARPY_BLOOD:       str << "HARPY_BLOOD\0"; break;
             case DREAM_CLOUDS:      str << "DREAM_CLOUDS\0"; break;
-            case FROG_LEGS:         str << "FROG_LEGS\0"; break;
-            case NIGHTSHADE:        str << "NIGHTSHADE\0"; break;
             case COFFEE_BEANS:      str << "COFFEE_BEANS\0"; break;
 
-            default:                str << "NONE"; break;
+            default:                str << "NONE\0"; break;
         }
         return str;
     }
@@ -202,6 +206,43 @@ private:
             default:            str << "ERROR"; break;
         }
         return str;
+    }
+
+    bool isItemPairEqual(Ingredient i0, Ingredient i1, Ingredient j0, Ingredient j1) {
+        return (i0 == j0 && i1 == j1) || (i0 == j1 && i1 == j0);
+    }
+
+    void maybeCombinePlayerIngredients(unsigned id) {
+        Ingredient left = players[id].leftItem;
+        Ingredient right = players[id].rightItem;
+        Ingredient result = INGREDIENT_NONE;
+
+        if (isItemPairEqual(left, right, FROG_LEGS, NIGHTSHADE)) {
+            result = DRAGONS_BREATH;
+        }
+        else if (isItemPairEqual(left, right, FROG_LEGS, LAVENDER)) {
+            result = HEART_ORGAN;
+        }
+        else if (isItemPairEqual(left, right, HONEY, LAVENDER)) {
+            result = GRIFFON_FEATHER;
+        }
+        else if (isItemPairEqual(left, right, HONEY, NIGHTSHADE)) {
+            result = HARPY_BLOOD;
+        }
+        else if (isItemPairEqual(left, right, LAVENDER, NIGHTSHADE)) {
+            result = DREAM_CLOUDS;
+        }
+        else if (isItemPairEqual(left, right, HONEY, FROG_LEGS)) {
+            result = COFFEE_BEANS;
+        }
+
+        if (result) {
+            players[id].mixedItem = result;
+            players[id].leftItem = INGREDIENT_NONE;
+            players[id].rightItem = INGREDIENT_NONE;
+        }
+
+        drawPlayer(id);
     }
 
     void clearPotIngredients() {
@@ -223,39 +264,37 @@ private:
         if (
                 potContainsIngredient(HEART_ORGAN)
                 && potContainsIngredient(DRAGONS_BREATH)
-                && potContainsIngredient(GARNET)
+                && potContainsIngredient(COFFEE_BEANS)
             ){
             pot_mixture = VITALITY;
         } else if (
                 potContainsIngredient(HEART_ORGAN)
-                && potContainsIngredient(ROSE_PETALS)
-                && potContainsIngredient(LAVENDER)
-                && potContainsIngredient(HONEY)
+                && potContainsIngredient(DREAM_CLOUDS)
+                && potContainsIngredient(COFFEE_BEANS)
                 ){
             pot_mixture = LOVE;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
-                && potContainsIngredient(DREAM_CLOUDS)
                 ){
             pot_mixture = FLIGHT;
         } else if (
-                potContainsIngredient(FROG_LEGS)
-                && potContainsIngredient(NIGHTSHADE)
+                potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
             pot_mixture = POISONING;
         } else if (
-                potContainsIngredient(LAVENDER)
-                && potContainsIngredient(HONEY)
-                && potContainsIngredient(NIGHTSHADE)
+                potContainsIngredient(DREAM_CLOUDS)
+                && potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(HARPY_BLOOD)
                 ){
             pot_mixture = DROWSINESS;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
-                && potContainsIngredient(FROG_LEGS)
                 && potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(DRAGONS_BREATH)
                 ){
             pot_mixture = HASTE;
         } else {
@@ -282,8 +321,6 @@ private:
             // odd number of "touches" means this is on a press so exit early
             return;
         }
-
-        clearScreen(id);
     }
 
     void onAccelChange(unsigned id)
@@ -322,6 +359,10 @@ private:
                     drawCauldronDebugIngredients();
                 }
             }
+
+            if (id > 0 && motion[id].shake) {
+                maybeCombinePlayerIngredients(id);
+            }
         }
 
         if (cube != 0) {
@@ -357,6 +398,10 @@ private:
                 // pour right item into cauldron
                 pot_ingredients[playerID] = players[playerID].rightItem;
                 players[playerID].rightItem = INGREDIENT_NONE;
+            } else if (players[playerID].mixedItem) {
+                // pour mixed item into cauldron
+                pot_ingredients[playerID] = players[playerID].mixedItem;
+                players[playerID].mixedItem = INGREDIENT_NONE;
             }
         } else {
             // players initiate a trade
@@ -375,7 +420,7 @@ private:
                 secondItem = &players[secondID].rightItem;
             }
 
-            if (firstItem && secondItem) {
+            if (firstItem && secondItem && *firstItem && *secondItem) {
                 // both players offer an item, do the trade
 
                 // TODO animation?!
