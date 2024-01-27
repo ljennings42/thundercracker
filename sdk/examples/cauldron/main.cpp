@@ -41,8 +41,6 @@ public:
 
     struct Player {
         unsigned touch;
-        unsigned neighborAdd;
-        unsigned neighborRemove;
 
         Ingredient ingredient;
     } players[CUBE_ALLOCATION];
@@ -187,6 +185,11 @@ private:
 
     void onAccelChange(unsigned id)
     {
+        if (id == 0) {
+            // early exit for cauldron
+            return;
+        }
+
         CubeID cube(id);
         auto accel = cube.accel();
 
@@ -218,12 +221,10 @@ private:
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
-        if (firstID < arraysize(players)) {
-            players[firstID].neighborRemove++;
+        if (firstID > 0) {
             drawNeighbors(firstID);
         }
-        if (secondID < arraysize(players)) {
-            players[secondID].neighborRemove++;
+        if (secondID > 0) {
             drawNeighbors(secondID);
         }
     }
@@ -247,11 +248,9 @@ private:
         vid[0].bg0rom.text(vec(1,2), str);
 
         if (firstID > 0) {
-            players[firstID].neighborAdd++;
             drawNeighbors(firstID);
         }
         if (secondID > 0) {
-            players[secondID].neighborAdd++;
             drawNeighbors(secondID);
         }
     }
@@ -266,10 +265,6 @@ private:
             << Hex(nb.neighborAt(LEFT), 2) << " "
             << Hex(nb.neighborAt(BOTTOM), 2) << " "
             << Hex(nb.neighborAt(RIGHT), 2) << "\n";
-
-        str << "   +" << players[cube].neighborAdd
-            << ", -" << players[cube].neighborRemove
-            << "\n\n";
 
         BG0ROMDrawable &draw = vid[cube].bg0rom;
         draw.text(vec(1,6), str);
