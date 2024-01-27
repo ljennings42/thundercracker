@@ -5,8 +5,6 @@
 #include <sifteo.h>
 #include "assets.gen.h"
 
-#define INVENTORY_SIZE 3
-
 using namespace Sifteo;
 
 Random gRandom;
@@ -23,7 +21,9 @@ static TiltShakeRecognizer motion[CUBE_ALLOCATION];
 class CauldronGame {
 public:
     enum Ingredient {
-        HEART_ORGAN = 0,
+        INGREDIENT_NONE = 0,
+
+        HEART_ORGAN,
         DRAGONS_BREATH,
         GARNET,
         ROSE_PETALS,
@@ -55,11 +55,11 @@ public:
     struct Player {
         unsigned touch;
 
-        Ingredient inventory[INVENTORY_SIZE];
-        unsigned selectedInventoryIndex;
+        Ingredient leftItem;
+        Ingredient rightItem;
     } players[CUBE_ALLOCATION];
 
-    Ingredient pot_ingredients[CUBE_ALLOCATION] = {MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS};
+    Ingredient pot_ingredients[CUBE_ALLOCATION] = {};
     Potion pot_mixture;
 
     void install()
@@ -85,10 +85,8 @@ private:
 
         // init ingredients if player
         if (id > 0) {
-            for (unsigned i = 0; i < INVENTORY_SIZE; i++) {
-                players[id].inventory[i] = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
-            }
-            players[id].selectedInventoryIndex = 0;
+            players[id].leftItem = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
+            players[id].rightItem = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
         }
 
         vid[id].initMode(BG0_ROM);
@@ -100,7 +98,11 @@ private:
         onTouchOrRelease(cube);
         drawNeighbors(cube);
 
-        drawCauldronDebugIngredients();
+        if (id == 0) {
+            drawCauldronDebugIngredients();
+        } else {
+            drawPlayer(id);
+        }
     }
 
     void clearScreen(unsigned id) {
@@ -116,28 +118,70 @@ private:
         String<128> str;
         str << "CAULDRON\n";
         for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            LOG("hi %d", i);
             str << ingredientToString(pot_ingredients[i]) << "\n";
         }
         vid[0].bg0rom.text(vec(1, 2), str);
     }
 
+    template <unsigned tCapacity>
+    String<tCapacity> subString(String<tCapacity> str, unsigned start, unsigned length) {
+        String<tCapacity> result;
+
+        int j = 0;
+        for (int i = start; i < str.size() && i < start + length; i++) {
+            result[j] = str[i];
+            LOG("%c", str[i]);
+            j++;
+        }
+        result[j] = '\0';
+
+        return result;
+    }
+
+    void drawPlayer(unsigned id) {
+        CubeID cube(id);
+        Neighborhood nb(cube);
+        BG0ROMDrawable &draw = vid[cube].bg0rom;
+
+        // LEFT item
+        {
+            draw.fill(vec(0, 0), vec(8, 16), draw.BLUE | draw.SOLID_FG);
+            String<16> ingredientString = ingredientToString((players[id].leftItem));
+            String<16> str = subString(ingredientString, 0, 7);
+            String<16> str2 = subString(ingredientString, 7, 7);
+            vid[cube].bg0rom.text(vec(1, 4), str, draw.WHITE_ON_BLUE);
+            vid[cube].bg0rom.text(vec(1, 5), str2, draw.WHITE_ON_BLUE);
+        }
+
+        // RIGHT item
+        {
+            draw.fill(vec(8, 0), vec(8, 16), draw.GREEN | draw.SOLID_FG);
+            String<16> ingredientString = ingredientToString((players[id].rightItem));
+            String<16> str = subString(ingredientString, 0, 7);
+            String<16> str2 = subString(ingredientString, 7, 7);
+            vid[cube].bg0rom.text(vec(8, 4), str, draw.WHITE_ON_GREEN);
+            vid[cube].bg0rom.text(vec(8, 5), str2, draw.WHITE_ON_GREEN);
+        }
+
+        drawNeighbors(id);
+    }
+
     String<16> ingredientToString(Ingredient ingredient) {
         String<16> str;
         switch (ingredient) {
-            case HEART_ORGAN:       str << "HEART_ORGAN"; break;
-            case DRAGONS_BREATH:    str << "DRAGONS_BREATH"; break;
-            case GARNET:            str << "GARNET"; break;
-            case ROSE_PETALS:       str << "ROSE_PETALS"; break;
+            case HEART_ORGAN:       str << "HEART_ORGAN\0"; break;
+            case DRAGONS_BREATH:    str << "DRAGONS_BREATH\0"; break;
+            case GARNET:            str << "GARNET\0"; break;
+            case ROSE_PETALS:       str << "ROSE_PETALS\0"; break;
 
-            case LAVENDER:          str << "LAVENDER"; break;
-            case HONEY:             str << "HONEY"; break;
-            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER"; break;
-            case HARPY_BLOOD:       str << "HARPY_BLOOD"; break;
-            case DREAM_CLOUDS:      str << "DREAM_CLOUDS"; break;
-            case FROG_LEGS:         str << "FROG_LEGS"; break;
-            case NIGHTSHADE:        str << "NIGHTSHADE"; break;
-            case COFFEE_BEANS:      str << "COFFEE_BEANS"; break;
+            case LAVENDER:          str << "LAVENDER\0"; break;
+            case HONEY:             str << "HONEY\0"; break;
+            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER\0"; break;
+            case HARPY_BLOOD:       str << "HARPY_BLOOD\0"; break;
+            case DREAM_CLOUDS:      str << "DREAM_CLOUDS\0"; break;
+            case FROG_LEGS:         str << "FROG_LEGS\0"; break;
+            case NIGHTSHADE:        str << "NIGHTSHADE\0"; break;
+            case COFFEE_BEANS:      str << "COFFEE_BEANS\0"; break;
 
             default:                str << "NONE"; break;
         }
@@ -158,11 +202,6 @@ private:
             default:            str << "ERROR"; break;
         }
         return str;
-    }
-
-    void onPlayerClicked(unsigned id) {
-        players[id].selectedInventoryIndex++;
-        players[id].selectedInventoryIndex = players[id].selectedInventoryIndex % INVENTORY_SIZE;
     }
 
     void clearPotIngredients() {
@@ -239,25 +278,12 @@ private:
         players[id].touch++;
         LOG("Touch event on cube #%d, state=%d\n", id, cube.isTouching());
 
-        if (id != 0) {
-            // draw ingredient to player cube
-            unsigned inventoryIndex = players[id].selectedInventoryIndex;
-            String<16> str = ingredientToString(players[id].inventory[inventoryIndex]);
-            vid[id].bg0rom.text(vec(1,9), str);
-        }
-
         if (players[id].touch % 2 == 1) {
             // odd number of "touches" means this is on a press so exit early
             return;
         }
 
         clearScreen(id);
-
-        // even number of "touches" means this is on a release
-        if (id != 0) {
-            // players
-            onPlayerClicked(id);
-        }
     }
 
     void onAccelChange(unsigned id)
@@ -319,49 +345,70 @@ private:
     {
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
-        if (firstID == 0) {
-            unsigned inventoryIndex = players[secondID].selectedInventoryIndex;
-            pot_ingredients[secondID] = players[secondID].inventory[inventoryIndex];
-        }
-        if (secondID == 0) {
-            unsigned inventoryIndex = players[firstID].selectedInventoryIndex;
-            pot_ingredients[firstID] = players[firstID].inventory[inventoryIndex];
+        if (firstID == 0 || secondID == 0) { // one of the cubes is the cauldron
+            unsigned playerID = firstID == 0 ? secondID : firstID;
+            unsigned playerSide = firstID == 0 ? secondSide : firstSide;
+
+            if (playerSide == LEFT && players[playerID].leftItem) {
+                // pour left item into cauldron
+                pot_ingredients[playerID] = players[playerID].leftItem;
+                players[playerID].leftItem = INGREDIENT_NONE;
+            } else if (playerSide == RIGHT && players[playerID].rightItem) {
+                // pour right item into cauldron
+                pot_ingredients[playerID] = players[playerID].rightItem;
+                players[playerID].rightItem = INGREDIENT_NONE;
+            }
+        } else {
+            // players initiate a trade
+
+            Ingredient* firstItem;
+            if (firstSide == LEFT && players[firstID].leftItem) {
+                firstItem = &players[firstID].leftItem;
+            } else if (firstSide == RIGHT && players[firstID].rightItem) {
+                firstItem = &players[firstID].rightItem;
+            }
+
+            Ingredient* secondItem;
+            if (secondSide == LEFT && players[secondID].leftItem) {
+                secondItem = &players[secondID].leftItem;
+            } else if (secondSide == RIGHT && players[secondID].rightItem) {
+                secondItem = &players[secondID].rightItem;
+            }
+
+            if (firstItem && secondItem) {
+                // both players offer an item, do the trade
+
+                // TODO animation?!
+
+                Ingredient tempItem = *firstItem;
+                *firstItem = *secondItem;
+                *secondItem = tempItem;
+            }
         }
 
         drawCauldronDebugIngredients();
 
         if (firstID > 0) {
-            drawNeighbors(firstID);
+            drawPlayer(firstID);
         }
         if (secondID > 0) {
-            drawNeighbors(secondID);
+            drawPlayer(secondID);
         }
     }
 
     void drawNeighbors(CubeID cube)
     {
         Neighborhood nb(cube);
-
-        String<64> str;
-        str << "nb "
-            << Hex(nb.neighborAt(TOP), 2) << " "
-            << Hex(nb.neighborAt(LEFT), 2) << " "
-            << Hex(nb.neighborAt(BOTTOM), 2) << " "
-            << Hex(nb.neighborAt(RIGHT), 2) << "\n";
-
         BG0ROMDrawable &draw = vid[cube].bg0rom;
-        draw.text(vec(1,6), str);
-
-        drawSideIndicator(draw, nb, vec( 1,  0), vec(14,  1), TOP);
-        drawSideIndicator(draw, nb, vec( 0,  1), vec( 1, 14), LEFT);
-        drawSideIndicator(draw, nb, vec( 1, 15), vec(14,  1), BOTTOM);
-        drawSideIndicator(draw, nb, vec(15,  1), vec( 1, 14), RIGHT);
+        drawSideIndicator(draw.ORANGE, draw, nb, vec( 1,  0), vec(14,  1), TOP);
+        drawSideIndicator(draw.ORANGE, draw, nb, vec( 0,  1), vec( 1, 14), LEFT);
+        drawSideIndicator(draw.ORANGE, draw, nb, vec( 1, 15), vec(14,  1), BOTTOM);
+        drawSideIndicator(draw.ORANGE, draw, nb, vec(15,  1), vec( 1, 14), RIGHT);
     }
 
-    static void drawSideIndicator(BG0ROMDrawable &draw, Neighborhood &nb,
+    static void drawSideIndicator(unsigned nbColor, BG0ROMDrawable &draw, Neighborhood &nb,
         Int2 topLeft, Int2 size, Side s)
     {
-        unsigned nbColor = draw.ORANGE;
         draw.fill(topLeft, size,
             nbColor | (nb.hasNeighborAt(s) ? draw.SOLID_FG : draw.SOLID_BG));
     }
@@ -376,6 +423,7 @@ void main()
 
     // We're entirely event-driven. Everything is
     // updated by SensorListener's event callbacks.
-    while (1)
+    while (1) {
         System::paint();
+    }
 }
