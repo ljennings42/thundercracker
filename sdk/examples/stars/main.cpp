@@ -1,5 +1,5 @@
 /*
- * Sifteo SDK Example.
+ * Sifteo SDK Example. Go Global Game Jam!
  */
 
 #include <sifteo.h>
