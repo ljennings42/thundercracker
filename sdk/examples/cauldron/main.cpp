@@ -285,9 +285,16 @@ private:
 
             str << "shake: " << motion[id].shake;
 
-            if (motion[id].shake && id == 0) {
-                // cauldron shake
-                performMixIngredients();
+            if (id == 0) {
+                // cauldron
+                if (motion[id].shake) {
+                    // cauldron shake
+                    performMixIngredients();
+                } else if (tilt.z == -1) {
+                    // empty cauldron
+                    clearPotIngredients();
+                    drawCauldronDebugIngredients();
+                }
             }
         }
 
