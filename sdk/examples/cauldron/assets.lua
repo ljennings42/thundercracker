@@ -6,7 +6,19 @@ Icon = image{"images/icon.png"}
 -- Loading screen: Divided into two asset groups
 
 BootstrapGroup = group{ quality=9.8 }
-LoadingBg = image{ "images/loading.png" }
+LoadingBg = image{"images/loading.png"}
+FloorBg = image{"images/Floor_BG.png"}
+Honey = image{"images/Ingredients/Honey.png", pinned=true}
+FrogLegs = image{"images/Ingredients/FrogLegs.png", pinned=true}
+Nightshade = image{"images/Ingredients/Nightshade.png", pinned=true}
+Lavender = image{"images/Ingredients/Honey.png", pinned=true}
+
+DragonsBreath = image{"images/Ingredients/Dragon_sBreath.png", pinned=true}
+Heart = image{"images/Ingredients/Heart.png", pinned=true}
+GriffonFeather = image{"images/Ingredients/GriffonFeather.png", pinned=true}
+HarpyBlood = image{"images/Ingredients/HarpyBlood.png", pinned=true}
+DreamClouds = image{"images/Ingredients/DreamClouds.png", pinned=true}
+CoffeeBeans = image{"images/Ingredients/CoffeeBeans.png", pinned=true}
 
 function frames(fmt, count)
     t = {}

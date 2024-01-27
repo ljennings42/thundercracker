@@ -103,31 +103,12 @@ private:
         // Draw initial state for all sensors
         onAccelChange(cube);
         onTouchOrRelease(cube);
-        drawNeighbors(cube);
 
         if (id == 0) {
-            // drawCauldronDebugIngredients();
+            // printCauldronDebugIngredients();
         } else {
             drawPlayer(id);
         }
-    }
-
-    void clearScreen(unsigned id) {
-        // CLEAR SCREEN
-        UInt2 topLeft = {0,0};
-        UInt2 size = {16,16};
-        vid[id].bg0rom.fill(topLeft, size, 0);
-    }
-
-    void drawCauldronDebugIngredients() {
-        // clearScreen(0);
-        vid[0].initMode(BG0_ROM);
-        String<128> str;
-        str << "CAULDRON\n";
-        for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            str << ingredientToString(pot_ingredients[i]) << "\n";
-        }
-        vid[0].bg0rom.text(vec(1, 2), str);
     }
 
     template <unsigned tCapacity>
@@ -147,56 +128,61 @@ private:
 
     void drawPlayer(unsigned id) {
         CubeID cube(id);
-        Neighborhood nb(cube);
-        BG0ROMDrawable &draw = vid[cube].bg0rom;
+
+        vid[id].initMode(BG0_SPR_BG1);
+        vid[id].attach(cube);
+
+        vid[id].bg0.image(vec(0,0), FloorBg, 0);
+
+        const Float2 center = {64, 64};
 
         if (players[id].mixedItem) {
-            draw.fill(vec(0, 0), vec(16, 16), draw.BLACK | draw.SOLID_FG);
-            String<16> ingredientString = ingredientToString(players[id].mixedItem);
-            vid[cube].bg0rom.text(vec(1, 4), ingredientString, draw.WHITE_ON_BLACK);
+            LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
+            vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
+            Float2 pos = {64, 64};
+            vid[id].sprites[0].move(pos - center);
         } else {
-            // LEFT item
+            // LEFT
             {
-                draw.fill(vec(0, 0), vec(8, 16), draw.BLUE | draw.SOLID_FG);
-                String<16> ingredientString = ingredientToString(players[id].leftItem);
-                String<16> str = subString(ingredientString, 0, 7);
-                String<16> str2 = subString(ingredientString, 7, 7);
-                vid[cube].bg0rom.text(vec(1, 4), str, draw.WHITE_ON_BLUE);
-                vid[cube].bg0rom.text(vec(1, 5), str2, draw.WHITE_ON_BLUE);
+                LOG("PLAYER %d LEFT: %d\n", id, players[id].leftItem);
+                if (players[id].leftItem) {
+                    vid[id].sprites[0].setImage(ingredientToImage(players[id].leftItem), 0);
+                    Float2 pos = {32, 64};
+                    vid[id].sprites[0].move(pos - center);
+                } else {
+                    vid[id].sprites[0].hide();
+                }
             }
-
-            // RIGHT item
+            // RIGHT
             {
-                draw.fill(vec(8, 0), vec(8, 16), draw.GREEN | draw.SOLID_FG);
-                String<16> ingredientString = ingredientToString(players[id].rightItem);
-                String<16> str = subString(ingredientString, 0, 7);
-                String<16> str2 = subString(ingredientString, 7, 7);
-                vid[cube].bg0rom.text(vec(8, 4), str, draw.WHITE_ON_GREEN);
-                vid[cube].bg0rom.text(vec(8, 5), str2, draw.WHITE_ON_GREEN);
+                LOG("PLAYER %d RIGHT: %d\n", id, players[id].rightItem);
+                if (players[id].rightItem) {
+                    vid[id].sprites[1].setImage(ingredientToImage(players[id].rightItem), 0);
+                    Float2 pos = {96, 64};
+                    vid[id].sprites[1].move(pos - center);
+                } else {
+                    vid[id].sprites[1].hide();
+                }
             }
         }
-
-        drawNeighbors(id);
     }
 
-    String<16> ingredientToString(Ingredient ingredient) {
-        String<16> str;
+    const PinnedAssetImage& ingredientToImage(Ingredient ingredient) {
         switch (ingredient) {
-            case HONEY:             str << "HONEY\0"; break;
-            case FROG_LEGS:         str << "FROG_LEGS\0"; break;
-            case NIGHTSHADE:        str << "NIGHTSHADE\0"; break;
-            case LAVENDER:          str << "LAVENDER\0"; break;
+            case HONEY:             return Honey;
+            case FROG_LEGS:         return FrogLegs;
+            case NIGHTSHADE:        return Nightshade;
+            case LAVENDER:          return Lavender;
 
-            case DRAGONS_BREATH:    str << "DRAGONS_BREATH\0"; break;
-            case HEART_ORGAN:       str << "HEART_ORGAN\0"; break;
-            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER\0"; break;
-            case HARPY_BLOOD:       str << "HARPY_BLOOD\0"; break;
-            case DREAM_CLOUDS:      str << "DREAM_CLOUDS\0"; break;
-            case COFFEE_BEANS:      str << "COFFEE_BEANS\0"; break;
+            case DRAGONS_BREATH:    return DragonsBreath;
+            case HEART_ORGAN:       return Heart;
+            case GRIFFON_FEATHER:   return GriffonFeather;
+            case HARPY_BLOOD:       return HarpyBlood;
+            case DREAM_CLOUDS:      return DreamClouds;
+            case COFFEE_BEANS:      return CoffeeBeans;
 
-            default:                str << "NONE\0"; break;
+            default:                return Heart;
         }
-        return str;
     }
 
     String<16> potionToString(Potion potion) {
@@ -310,12 +296,6 @@ private:
         LOG("MIX: %i", pot_mixture);
 
         clearPotIngredients();
-
-        clearScreen(0);
-        String<32> str;
-        str << "MIX: " << potionToString(pot_mixture);
-
-        vid[0].bg0rom.text(vec(1,2), str);
     }
     
     void onTouchOrRelease(unsigned id)
@@ -335,12 +315,6 @@ private:
         CubeID cube(id);
         auto accel = cube.accel();
 
-        String<64> str;
-        str << "acc: "
-            << Fixed(accel.x, 3)
-            << Fixed(accel.y, 3)
-            << Fixed(accel.z, 3) << "\n";
-
         unsigned changeFlags = motion[id].update();
         if (changeFlags) {
             // Tilt/shake changed
@@ -348,12 +322,6 @@ private:
             LOG("Tilt/shake changed, flags=%08x\n", changeFlags);
 
             auto tilt = motion[id].tilt;
-            str << "tilt:"
-                << Fixed(tilt.x, 3)
-                << Fixed(tilt.y, 3)
-                << Fixed(tilt.z, 3) << "\n";
-
-            str << "shake: " << motion[id].shake;
 
             if (id == 0) {
                 // cauldron
@@ -363,7 +331,6 @@ private:
                 } else if (tilt.z == -1) {
                     // empty cauldron
                     clearPotIngredients();
-                    // drawCauldronDebugIngredients();
                 }
             }
 
@@ -371,22 +338,11 @@ private:
                 maybeCombinePlayerIngredients(id);
             }
         }
-
-        if (cube != 0) {
-            vid[cube].bg0rom.text(vec(1, 10), str);
-        }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
-
-        if (firstID > 0) {
-            drawNeighbors(firstID);
-        }
-        if (secondID > 0) {
-            drawNeighbors(secondID);
-        }
     }
 
     void onNeighborAdd(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
@@ -438,31 +394,12 @@ private:
             }
         }
 
-        // drawCauldronDebugIngredients();
-
         if (firstID > 0) {
             drawPlayer(firstID);
         }
         if (secondID > 0) {
             drawPlayer(secondID);
         }
-    }
-
-    void drawNeighbors(CubeID cube)
-    {
-        Neighborhood nb(cube);
-        BG0ROMDrawable &draw = vid[cube].bg0rom;
-        drawSideIndicator(draw.ORANGE, draw, nb, vec( 1,  0), vec(14,  1), TOP);
-        drawSideIndicator(draw.ORANGE, draw, nb, vec( 0,  1), vec( 1, 14), LEFT);
-        drawSideIndicator(draw.ORANGE, draw, nb, vec( 1, 15), vec(14,  1), BOTTOM);
-        drawSideIndicator(draw.ORANGE, draw, nb, vec(15,  1), vec( 1, 14), RIGHT);
-    }
-
-    static void drawSideIndicator(unsigned nbColor, BG0ROMDrawable &draw, Neighborhood &nb,
-        Int2 topLeft, Int2 size, Side s)
-    {
-        draw.fill(topLeft, size,
-            nbColor | (nb.hasNeighborAt(s) ? draw.SOLID_FG : draw.SOLID_BG));
     }
 };
 
