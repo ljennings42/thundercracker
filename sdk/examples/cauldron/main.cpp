@@ -4,7 +4,12 @@
 
 #include <sifteo.h>
 #include "assets.gen.h"
+
+#define INVENTORY_SIZE 3
+
 using namespace Sifteo;
+
+Random gRandom;
 
 static Metadata M = Metadata()
     .title("Cauldron Game")
@@ -18,37 +23,44 @@ static TiltShakeRecognizer motion[CUBE_ALLOCATION];
 class CauldronGame {
 public:
     enum Ingredient {
-        WATER = 0,
-        FIRE,
-        EARTH,
-        AIR,
+        HEART_ORGAN = 0,
+        DRAGONS_BREATH,
+        GARNET,
+        ROSE_PETALS,
+
+        LAVENDER,
+        HONEY,
+        GRIFFON_FEATHER,
+        HARPY_BLOOD,
+        DREAM_CLOUDS,
+        FROG_LEGS,
+        NIGHTSHADE,
+        COFFEE_BEANS,
 
         MAX_INGREDIENTS,
     };
 
-    enum Mixture {
-        MIX_NONE = 0,
+    enum Potion {
+        POTION_NONE = 0,
 
-        STEAM, // WATER + FIRE
-        LAVA,  // EARTH + FIRE
-        DUST,  // EARTH + AIR
-        MIST,  // WATER + AIR
-        SMOKE, // FIRE + AIR
-        MUD,   // WATER + EARTH
-        ASH,   // EARTH + FIRE + AIR
-        LIFE,  // AIR + EARTH + FIRE + WATER
+        VITALITY,
+        LOVE,
+        FLIGHT,
+        POISONING,
+        DROWSINESS,
+        HASTE,
+        NEUTRAL,
     };
 
     struct Player {
         unsigned touch;
-        unsigned neighborAdd;
-        unsigned neighborRemove;
 
-        Ingredient ingredient;
+        Ingredient inventory[INVENTORY_SIZE];
+        unsigned selectedInventoryIndex;
     } players[CUBE_ALLOCATION];
 
     Ingredient pot_ingredients[CUBE_ALLOCATION] = {MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS};
-    Mixture pot_mixture;
+    Potion pot_mixture;
 
     void install()
     {
@@ -67,94 +79,156 @@ private:
     void onConnect(unsigned id)
     {
         CubeID cube(id);
-        uint64_t hwid = cube.hwID();
 
         bzero(players[id]);
         LOG("Cube %d connected\n", id);
+
+        // init ingredients if player
+        if (id > 0) {
+            for (unsigned i = 0; i < INVENTORY_SIZE; i++) {
+                players[id].inventory[i] = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
+            }
+            players[id].selectedInventoryIndex = 0;
+        }
 
         vid[id].initMode(BG0_ROM);
         vid[id].attach(id);
         motion[id].attach(id);
 
-        // Draw the cube's identity
-        String<128> str;
-        if (id == 0) {
-            str << "CAULDRON\n";
-        } else {
-            str << "I am cube #" << cube << "\n";
-        }
-        vid[cube].bg0rom.text(vec(1,2), str);
-
         // Draw initial state for all sensors
         onAccelChange(cube);
         onTouchOrRelease(cube);
         drawNeighbors(cube);
+
+        drawCauldronDebugIngredients();
     }
 
-    String<8> ingredientToString(Ingredient ingredient) {
-        String<8> str;
+    void clearScreen(unsigned id) {
+        // CLEAR SCREEN
+        UInt2 topLeft = {0,0};
+        UInt2 size = {16,16};
+        vid[id].bg0rom.fill(topLeft, size, 0);
+    }
+
+    void drawCauldronDebugIngredients() {
+        clearScreen(0);
+
+        String<128> str;
+        str << "CAULDRON\n";
+        for (int i = 1; i < CUBE_ALLOCATION; i++) {
+            LOG("hi %d", i);
+            str << ingredientToString(pot_ingredients[i]) << "\n";
+        }
+        vid[0].bg0rom.text(vec(1, 2), str);
+    }
+
+    String<16> ingredientToString(Ingredient ingredient) {
+        String<16> str;
         switch (ingredient) {
-            case FIRE:
-                str << "FIRE   ";
-                break;
-            case WATER:
-                str << "WATER   ";
-                break;
-            case EARTH:
-                str << "EARTH   ";
-                break;
-            case AIR:
-                str << "AIR   ";
-                break;
-            default:
-                str << "UNK   ";
-                break;
+            case HEART_ORGAN:       str << "HEART_ORGAN"; break;
+            case DRAGONS_BREATH:    str << "DRAGONS_BREATH"; break;
+            case GARNET:            str << "GARNET"; break;
+            case ROSE_PETALS:       str << "ROSE_PETALS"; break;
+
+            case LAVENDER:          str << "LAVENDER"; break;
+            case HONEY:             str << "HONEY"; break;
+            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER"; break;
+            case HARPY_BLOOD:       str << "HARPY_BLOOD"; break;
+            case DREAM_CLOUDS:      str << "DREAM_CLOUDS"; break;
+            case FROG_LEGS:         str << "FROG_LEGS"; break;
+            case NIGHTSHADE:        str << "NIGHTSHADE"; break;
+            case COFFEE_BEANS:      str << "COFFEE_BEANS"; break;
+
+            default:                str << "NONE"; break;
+        }
+        return str;
+    }
+
+    String<16> potionToString(Potion potion) {
+        String<16> str;
+        switch (potion) {
+            case VITALITY:      str << "VITALITY"; break;
+            case LOVE:          str << "LOVE"; break;
+            case FLIGHT:        str << "FLIGHT"; break;
+            case POISONING:     str << "POISONING"; break;
+            case DROWSINESS:    str << "DROWSINESS"; break;
+            case HASTE:         str << "HASTE"; break;
+            case NEUTRAL:       str << "NEUTRAL"; break;
+
+            default:            str << "ERROR"; break;
         }
         return str;
     }
 
     void onPlayerClicked(unsigned id) {
-        players[id].ingredient = (Ingredient) ((players[id].ingredient + 1) % MAX_INGREDIENTS);
+        players[id].selectedInventoryIndex++;
+        players[id].selectedInventoryIndex = players[id].selectedInventoryIndex % INVENTORY_SIZE;
     }
 
-    bool containsIngredientPair(Ingredient i0, Ingredient i1, Ingredient target0, Ingredient target1) {
-        return (i0 == target0 && i1 == target1) || (i0 == target1 && i1 == target0);
+    void clearPotIngredients() {
+        for (int i = 0; i < CUBE_ALLOCATION; i++) {
+            pot_ingredients[i] = MAX_INGREDIENTS;
+        }
+    }
+
+    bool potContainsIngredient(Ingredient ingredient) {
+        for (int i = 0; i < CUBE_ALLOCATION; i++) {
+            if (pot_ingredients[i] == ingredient) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void performMixIngredients() {
-        // TODO: better logic that doesn't use hard coded indices
-
-        String<32> str;
-        str << "MIX: ";
-
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], WATER, FIRE)) {
-            pot_mixture = STEAM;
-            str << "STEAM";
-        }
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], EARTH, FIRE)) {
-            pot_mixture = LAVA;
-            str << "LAVA ";
-        }
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], EARTH, AIR)) {
-            pot_mixture = DUST;
-            str << "DUST ";
-        }
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], WATER, AIR)) {
-            pot_mixture = MIST;
-            str << "MIST ";
-        }
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], FIRE, AIR)) {
-            pot_mixture = SMOKE;
-            str << "SMOKE ";
-        }
-        if(containsIngredientPair(pot_ingredients[1], pot_ingredients[2], WATER, EARTH)) {
-            pot_mixture = MUD;
-            str << "MUD  ";
+        if (
+                potContainsIngredient(HEART_ORGAN)
+                && potContainsIngredient(DRAGONS_BREATH)
+                && potContainsIngredient(GARNET)
+            ){
+            pot_mixture = VITALITY;
+        } else if (
+                potContainsIngredient(HEART_ORGAN)
+                && potContainsIngredient(ROSE_PETALS)
+                && potContainsIngredient(LAVENDER)
+                && potContainsIngredient(HONEY)
+                ){
+            pot_mixture = LOVE;
+        } else if (
+                potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(DRAGONS_BREATH)
+                && potContainsIngredient(HARPY_BLOOD)
+                && potContainsIngredient(DREAM_CLOUDS)
+                ){
+            pot_mixture = FLIGHT;
+        } else if (
+                potContainsIngredient(FROG_LEGS)
+                && potContainsIngredient(NIGHTSHADE)
+                && potContainsIngredient(HARPY_BLOOD)
+                ){
+            pot_mixture = POISONING;
+        } else if (
+                potContainsIngredient(LAVENDER)
+                && potContainsIngredient(HONEY)
+                && potContainsIngredient(NIGHTSHADE)
+                ){
+            pot_mixture = DROWSINESS;
+        } else if (
+                potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(FROG_LEGS)
+                && potContainsIngredient(COFFEE_BEANS)
+                ){
+            pot_mixture = HASTE;
+        } else {
+            pot_mixture = NEUTRAL;
         }
         LOG("MIX: %i", pot_mixture);
 
-//        ASH,   // EARTH + FIRE + AIR
-//        LIFE,  // AIR + EARTH + FIRE + WATER
+        clearPotIngredients();
+
+        clearScreen(0);
+        String<32> str;
+        str << "MIX: " << potionToString(pot_mixture);
 
         vid[0].bg0rom.text(vec(1,2), str);
     }
@@ -166,7 +240,9 @@ private:
         LOG("Touch event on cube #%d, state=%d\n", id, cube.isTouching());
 
         if (id != 0) {
-            String<8> str = ingredientToString(players[id].ingredient);
+            // draw ingredient to player cube
+            unsigned inventoryIndex = players[id].selectedInventoryIndex;
+            String<16> str = ingredientToString(players[id].inventory[inventoryIndex]);
             vid[id].bg0rom.text(vec(1,9), str);
         }
 
@@ -175,11 +251,10 @@ private:
             return;
         }
 
+        clearScreen(id);
+
         // even number of "touches" means this is on a release
-        if (id == 0) {
-            // cauldron
-            performMixIngredients();
-        } else {
+        if (id != 0) {
             // players
             onPlayerClicked(id);
         }
@@ -209,21 +284,33 @@ private:
                 << Fixed(tilt.z, 3) << "\n";
 
             str << "shake: " << motion[id].shake;
+
+            if (id == 0) {
+                // cauldron
+                if (motion[id].shake) {
+                    // cauldron shake
+                    performMixIngredients();
+                } else if (tilt.z == -1) {
+                    // empty cauldron
+                    clearPotIngredients();
+                    drawCauldronDebugIngredients();
+                }
+            }
         }
 
-        vid[cube].bg0rom.text(vec(1,10), str);
+        if (cube != 0) {
+            vid[cube].bg0rom.text(vec(1, 10), str);
+        }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
-        if (firstID < arraysize(players)) {
-            players[firstID].neighborRemove++;
+        if (firstID > 0) {
             drawNeighbors(firstID);
         }
-        if (secondID < arraysize(players)) {
-            players[secondID].neighborRemove++;
+        if (secondID > 0) {
             drawNeighbors(secondID);
         }
     }
@@ -233,25 +320,20 @@ private:
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
         if (firstID == 0) {
-            pot_ingredients[secondID] = players[secondID].ingredient;
+            unsigned inventoryIndex = players[secondID].selectedInventoryIndex;
+            pot_ingredients[secondID] = players[secondID].inventory[inventoryIndex];
         }
         if (secondID == 0) {
-            pot_ingredients[firstID] = players[firstID].ingredient;
+            unsigned inventoryIndex = players[firstID].selectedInventoryIndex;
+            pot_ingredients[firstID] = players[firstID].inventory[inventoryIndex];
         }
 
-        String<128> str;
-        str << "CAULDRON\n";
-        for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            str << ingredientToString(pot_ingredients[i]) << "\n";
-        }
-        vid[0].bg0rom.text(vec(1,2), str);
+        drawCauldronDebugIngredients();
 
         if (firstID > 0) {
-            players[firstID].neighborAdd++;
             drawNeighbors(firstID);
         }
         if (secondID > 0) {
-            players[secondID].neighborAdd++;
             drawNeighbors(secondID);
         }
     }
@@ -266,10 +348,6 @@ private:
             << Hex(nb.neighborAt(LEFT), 2) << " "
             << Hex(nb.neighborAt(BOTTOM), 2) << " "
             << Hex(nb.neighborAt(RIGHT), 2) << "\n";
-
-        str << "   +" << players[cube].neighborAdd
-            << ", -" << players[cube].neighborRemove
-            << "\n\n";
 
         BG0ROMDrawable &draw = vid[cube].bg0rom;
         draw.text(vec(1,6), str);
