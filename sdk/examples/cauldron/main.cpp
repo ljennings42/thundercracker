@@ -100,11 +100,15 @@ private:
         drawCauldronDebugIngredients();
     }
 
+    void clearScreen(unsigned id) {
+        // CLEAR SCREEN
+        UInt2 topLeft = {0,0};
+        UInt2 size = {16,16};
+        vid[id].bg0rom.fill(topLeft, size, 0);
+    }
+
     void drawCauldronDebugIngredients() {
-        // CLEAR Cauldron screen
-        UInt2 topLeft = {0, 0};
-        UInt2 size = {16, 16};
-        vid[0].bg0rom.fill(topLeft, size, 0);
+        clearScreen(0);
 
         String<128> str;
         str << "CAULDRON\n";
@@ -155,6 +159,12 @@ private:
 
     void onPlayerClicked(unsigned id) {
         players[id].ingredient = (Ingredient) ((players[id].ingredient + 1) % MAX_INGREDIENTS);
+    }
+
+    void clearPotIngredients() {
+        for (int i = 0; i < CUBE_ALLOCATION; i++) {
+            pot_ingredients[i] = MAX_INGREDIENTS;
+        }
     }
 
     bool potContainsIngredient(Ingredient ingredient) {
@@ -210,6 +220,9 @@ private:
         }
         LOG("MIX: %i", pot_mixture);
 
+        clearPotIngredients();
+
+        clearScreen(0);
         String<32> str;
         str << "MIX: " << potionToString(pot_mixture);
 
@@ -233,16 +246,10 @@ private:
             return;
         }
 
-        // CLEAR SCREEN
-        UInt2 topLeft = {0,0};
-        UInt2 size = {16,16};
-        vid[id].bg0rom.fill(topLeft, size, 0);
+        clearScreen(id);
 
         // even number of "touches" means this is on a release
-        if (id == 0) {
-            // cauldron
-            performMixIngredients();
-        } else {
+        if (id != 0) {
             // players
             onPlayerClicked(id);
         }
@@ -250,11 +257,6 @@ private:
 
     void onAccelChange(unsigned id)
     {
-        if (id == 0) {
-            // early exit for cauldron
-            return;
-        }
-
         CubeID cube(id);
         auto accel = cube.accel();
 
@@ -277,9 +279,16 @@ private:
                 << Fixed(tilt.z, 3) << "\n";
 
             str << "shake: " << motion[id].shake;
+
+            if (motion[id].shake && id == 0) {
+                // cauldron shake
+                performMixIngredients();
+            }
         }
 
-        vid[cube].bg0rom.text(vec(1,10), str);
+        if (cube != 0) {
+            vid[cube].bg0rom.text(vec(1, 10), str);
+        }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
