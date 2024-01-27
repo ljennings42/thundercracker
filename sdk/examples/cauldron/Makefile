@@ -2,8 +2,8 @@ APP = cauldron
 
 include $(SDK_DIR)/Makefile.defs
 
-OBJS = $(ASSETS).gen.o main.o
-ASSETDEPS += *.png $(ASSETS).lua
+OBJS = $(ASSETS).gen.o main.o loader.o
+ASSETDEPS += images/*.png $(ASSETS).lua
 CCFLAGS += -DCUBE_ALLOCATION=12
 
 # build assets.html to proof stir-processed assets.

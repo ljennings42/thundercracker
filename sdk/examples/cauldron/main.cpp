@@ -4,8 +4,18 @@
 
 #include <sifteo.h>
 #include "assets.gen.h"
-
+#include "loader.h"
 using namespace Sifteo;
+static const unsigned numCubes = 3;
+static const CubeSet allCubes(0, numCubes);
+static AssetSlot MainSlot = AssetSlot::allocate()
+        .bootstrap(BootstrapGroup);
+
+static AssetSlot AnimationSlot = AssetSlot::allocate();
+
+static VideoBuffer vid[CUBE_ALLOCATION];
+static TiltShakeRecognizer motion[CUBE_ALLOCATION];
+static MyLoader loader(allCubes, MainSlot, vid);
 
 Random gRandom;
 
@@ -14,9 +24,6 @@ static Metadata M = Metadata()
     .package("com.sifteo.sdk.cauldron", "1.1")
     .icon(Icon)
     .cubeRange(0, CUBE_ALLOCATION);
-
-static VideoBuffer vid[CUBE_ALLOCATION];
-static TiltShakeRecognizer motion[CUBE_ALLOCATION];
 
 class CauldronGame {
 public:
@@ -34,6 +41,7 @@ public:
         HARPY_BLOOD,
         DREAM_CLOUDS,
         FROG_LEGS,
+
         NIGHTSHADE,
         COFFEE_BEANS,
 
@@ -99,7 +107,7 @@ private:
         drawNeighbors(cube);
 
         if (id == 0) {
-            drawCauldronDebugIngredients();
+            // drawCauldronDebugIngredients();
         } else {
             drawPlayer(id);
         }
@@ -113,8 +121,8 @@ private:
     }
 
     void drawCauldronDebugIngredients() {
-        clearScreen(0);
-
+        // clearScreen(0);
+        vid[0].initMode(BG0_ROM);
         String<128> str;
         str << "CAULDRON\n";
         for (int i = 1; i < CUBE_ALLOCATION; i++) {
@@ -319,7 +327,7 @@ private:
                 } else if (tilt.z == -1) {
                     // empty cauldron
                     clearPotIngredients();
-                    drawCauldronDebugIngredients();
+                    // drawCauldronDebugIngredients();
                 }
             }
         }
@@ -386,7 +394,7 @@ private:
             }
         }
 
-        drawCauldronDebugIngredients();
+        // drawCauldronDebugIngredients();
 
         if (firstID > 0) {
             drawPlayer(firstID);
@@ -414,16 +422,38 @@ private:
     }
 };
 
+void animation(const AssetImage &image, unsigned id)
+{
+    CubeID cube(id);
+    loader.load(image.assetGroup(), AnimationSlot, cube);
+
+    vid[cube].initMode(BG0);
+    vid[cube].attach(cube);
+
+    while (1) {
+        unsigned frame = SystemTime::now().cycleFrame(2.0, image.numFrames());
+        vid[cube].bg0.image(vec(0,0), image, frame);
+        System::paint();
+    }
+}
+
+void loadImage() {
+    unsigned id = 0;
+
+    vid[id].initMode(BG0);
+    vid[id].attach(id);
+    motion[id].attach(id);
+
+    vid[id].bg0.image(vec(0,0), Cauldron);
+}
 
 void main()
 {
     static CauldronGame game;
-
     game.install();
 
-    // We're entirely event-driven. Everything is
-    // updated by SensorListener's event callbacks.
     while (1) {
+        animation(Cauldron, 0);
         System::paint();
     }
 }
