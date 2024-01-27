@@ -12,47 +12,40 @@ static Metadata M = Metadata()
     .icon(Icon)
     .cubeRange(1);
 
+static AssetSlot gMainSlot = AssetSlot::allocate();
+
+static AssetLoader loader; // global asset loader (each cube will have symmetric assets)
+
 static const CubeID cube = 0;
 static VideoBuffer vid;
 
-const AudioChannel squareChannel(0);
-const AudioChannel sine1Channel(1);
-const AudioChannel sine2Channel(2);
 
-static int16_t sineWave[64];
-static const AssetAudio sineAsset = AssetAudio::fromPCM(sineWave);
-
-static int16_t squareWave[256];
-static const AssetAudio squareAsset = AssetAudio::fromPCM(squareWave);
-
-void synthInit()
-{
-    for (int i = 0; i != arraysize(sineWave); i++) {
-        float theta = i * float(M_PI * 2 / arraysize(sineWave));
-        sineWave[i] = sin(theta) * 0x7fff;
-    }
-
-    sine1Channel.play(sineAsset);
-    sine2Channel.play(sineAsset);
-    squareChannel.play(squareAsset);
+static void playSfx(const AssetAudio& sfx) {
+    static int i=0;
+    AudioChannel(i).play(sfx);
+    i = 1 - i;
 }
 
-void synthesize(float hz, float timbre, float volume)
-{
-    LOG("hz=%f timbre=%f volume=%f\n", hz, timbre, volume);
-    
-    int dutyCycle = timbre * arraysize(squareWave);
-    for (int i = 0; i != arraysize(squareWave); i++) {
-        squareWave[i] = i < dutyCycle ? 0x7fff : 0x8000;
+// str will print out character by character
+// location is a vector<unsigned> of coords indicating where to place the text
+// charRate is the number of chars to print at a time
+void typeText(String<128> str, Vector2<int> location, unsigned textUpdateDelay, unsigned charRate = 2) {
+    String<128> temp;
+    int endIndex = 0; // index of str to print to
+    int count = 0;
+    while (temp != str) {
+        // magic numbers galore
+        if (count % textUpdateDelay) {
+            playSfx(Beep);
+
+            endIndex += charRate;
+            for (int i = 0; i < endIndex; i++) {
+                temp[i] = str[i];
+            }
+        }
+        count++;
     }
-
-    sine1Channel.setVolume(volume * 96.f);
-    sine2Channel.setVolume(volume * 64.f);
-    squareChannel.setVolume(volume * 16.f);
-
-    sine1Channel.setSpeed(hz * arraysize(sineWave));                // Fundamental
-    sine2Channel.setSpeed(hz * 1.02f * arraysize(sineWave));        // Beat frequency
-    squareChannel.setSpeed(hz * 1.26f * arraysize(squareWave));     // 5 half-steps above
+    vid.bg0rom.text(location, temp);
 }
 
 void main()
@@ -64,24 +57,14 @@ void main()
     vid.attach(cube);
     vid.bg0rom.erase(bg);
     vid.bg0rom.fill(vec(0,0), vec(3,3), fg);
-
-    synthInit();
-
-    float hz = 0;
+    String<128> str;
+    str << "This is a test";
+    typeText(str, vec(1, 2), 1000, 1);
 
     while (1) {
-        // Scale to [-1, 1]
-        auto accel = cube.accel() / 128.f;
 
-        // Glide to the target note (half-steps above or below middle C)
-        float note = 261.6f * pow(1.05946f, 8 + round(accel.y * 24.f));
-        hz += (note - hz) * 0.4f;
-
-        synthesize(hz, accel.x - 0.2f,
-            clamp(accel.x + 0.5f, 0.f, 1.f));
-
-        const Int2 center = LCD_center - vec(24,24)/2;
-        vid.bg0rom.setPanning(-(center + accel.xy() * 60.f));
+        //const Int2 center = LCD_center - vec(24,24)/2;
+        //vid.bg0rom.setPanning(-(center + accel.xy() * 60.f));
         System::paint();
     }
 }
