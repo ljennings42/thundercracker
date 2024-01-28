@@ -109,11 +109,18 @@ public:
         // clearScreen(0);
         vid[0].initMode(BG0_ROM);
         String<128> str;
-        str << "CAULDRON\n";
-        for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            str << ingredientToString(pot_ingredients[i]) << "\n";
+        if (pot_mixture == 0) {
+            str << "CAULDRON\n";
+            for (int i = 1; i < CUBE_ALLOCATION; i++) {
+                str << ingredientToString(pot_ingredients[i]) << "\n";
+            }
+            vid[0].bg0rom.text(vec(1, 2), str);
         }
-        vid[0].bg0rom.text(vec(1, 2), str);
+        else {
+            str << "POTION: " << potionToString(pot_mixture);
+            vid[0].bg0rom.text(vec(1, 2), str);
+        }
+
     }
 
     void loadPotionSprite() {
@@ -371,7 +378,6 @@ private:
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
             pot_ingredients[i] = MAX_INGREDIENTS;
-            pot_mixture = POTION_NONE;
         }
     }
 
