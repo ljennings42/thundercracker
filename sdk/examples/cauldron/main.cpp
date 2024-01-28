@@ -107,7 +107,7 @@ public:
 
     Ingredient potIngredients[CUBE_ALLOCATION] = {};
     ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
-    Potion pot_mixture;
+    Potion potMixture;
 
     void install()
     {
@@ -127,7 +127,7 @@ public:
         // clearScreen(0);
         vid[CAULDRON_ID].initMode(BG0_ROM);
         String<128> str;
-        if (pot_mixture == 0) {
+        if (potMixture == 0) {
             str << "CAULDRON\n";
             for (int i = 1; i < CUBE_ALLOCATION; i++) {
                 str << ingredientToString(potIngredients[i]) << "\n";
@@ -135,7 +135,7 @@ public:
             vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
         }
         else {
-            str << "POTION: " << potionToString(pot_mixture);
+            str << "POTION: " << potionToString(potMixture);
             vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
         }
 
@@ -144,7 +144,7 @@ public:
     void loadPotionSprite() {
         CubeID cube(CAULDRON_ID);
         vid[cube].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
-        switch(pot_mixture) {
+        switch(potMixture) {
             case VITALITY :
                 vid[cube].bg1.image(vec(0,0), PotionVitality, 0);
                 break;
@@ -436,42 +436,42 @@ private:
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(COFFEE_BEANS)
             ){
-            pot_mixture = VITALITY;
+            potMixture = VITALITY;
         } else if (
                 potContainsIngredient(HEART_ORGAN)
                 && potContainsIngredient(DREAM_CLOUDS)
                 && potContainsIngredient(COFFEE_BEANS)
                 ){
-            pot_mixture = LOVE;
+            potMixture = LOVE;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
-            pot_mixture = FLIGHT;
+            potMixture = FLIGHT;
         } else if (
                 potContainsIngredient(COFFEE_BEANS)
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
-            pot_mixture = POISONING;
+            potMixture = POISONING;
         } else if (
                 potContainsIngredient(DREAM_CLOUDS)
                 && potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
-            pot_mixture = DROWSINESS;
+            potMixture = DROWSINESS;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(COFFEE_BEANS)
                 && potContainsIngredient(DRAGONS_BREATH)
                 ){
-            pot_mixture = HASTE;
+            potMixture = HASTE;
         } else {
-            pot_mixture = NEUTRAL;
+            potMixture = NEUTRAL;
         }
 
-        LOG("MIX: %i", pot_mixture);
+        LOG("MIX: %i", potMixture);
 
         clearPotIngredients();
     }
