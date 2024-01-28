@@ -152,6 +152,7 @@ public:
                 vid[cube].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
+                vid[cube].bg1.image(vec(0,0), PotionSpeed, 0);
             case NEUTRAL:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
