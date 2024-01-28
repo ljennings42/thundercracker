@@ -404,16 +404,6 @@ private:
     }
 };
 
-void loadImage() {
-    unsigned id = 0;
-
-    vid[id].initMode(BG0);
-    vid[id].attach(id);
-    motion[id].attach(id);
-
-    vid[id].bg0.image(vec(0,0), Cauldron);
-}
-
 void main()
 {
     static CauldronGame game;
