@@ -258,15 +258,11 @@ private:
         players[id].leftAnimation.animateDirection = LEFT;
         players[id].rightAnimation.animateDirection = RIGHT;
 
-        vid[id].initMode(BG0_SPR_BG1);
-        vid[id].attach(id);
         motion[id].attach(id);
 
         // Draw initial state for all sensors
         onAccelChange(cube);
         onTouchOrRelease(cube);
-
-        forceDraw(cube);
     }
 
     template <unsigned tCapacity>
@@ -653,7 +649,7 @@ void main()
     bool debug = false;
 
     if (!debug) {
-        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         showText();
         game.isIntroTextDone = true;
     }

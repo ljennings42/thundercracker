@@ -24,7 +24,7 @@ public:
      * If the group is already installed, returns quickly without
      * drawing anything.
      */
-    void load(Sifteo::AssetGroup &group, Sifteo::AssetSlot slot, Sifteo::CubeID cube);
+    void load(Sifteo::AssetGroup &group, Sifteo::AssetSlot slot, unsigned cubeCount);
 
 private:
     Sifteo::CubeSet cubes;

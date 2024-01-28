@@ -14,7 +14,7 @@ MyLoader::MyLoader(CubeSet cubes, AssetSlot loaderSlot, VideoBuffer *vid)
 }
 
 
-void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
+void MyLoader::load(AssetGroup &group, AssetSlot slot, unsigned cubeCount)
 {
     LOG("Loader, (%P, %d): starting\n", &group, slot.sys);
 
@@ -32,14 +32,15 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
     }
 
     // Draw a background image from the bootstrap asset group.
-    vid[cube].initMode(BG0);
-    vid[cube].attach(cube);
-
-    /*
-     * Must draw to the buffer after attaching it to a cube, so we
-     * know how to relocate this image's tiles for the cube in question.
-     */
-    vid[cube].bg0.image(vec(0,0), LoadingBG);
+    for (unsigned cube = 0; cube < cubeCount; cube++) {
+        vid[cube].initMode(BG0);
+        vid[cube].attach(cube);
+        /*
+         * Must draw to the buffer after attaching it to a cube, so we
+         * know how to relocate this image's tiles for the cube in question.
+         */
+        vid[cube].bg0.image(vec(0,0), LoadingBG);
+    }
 
     // Draw the background
     System::paint();
@@ -55,18 +56,22 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
      * Animate the loading process, using STAMP mode to draw an animated progress bar.
      */
 
-    vid[cube].initMode(STAMP);
-    vid[cube].setWindow(100, 10);
-    vid[cube].stamp.disableKey();
+    for (unsigned cube = 0; cube < cubeCount; cube++) {
+        vid[cube].initMode(STAMP);
+        vid[cube].setWindow(100, 10);
+        vid[cube].stamp.disableKey();
 
-    auto& fb = vid[cube].stamp.initFB<16, 16>();
+        auto& fb = vid[cube].stamp.initFB<16, 16>();
 
-    for (unsigned y = 0; y < 16; ++y)
-        for (unsigned x = 0; x < 16; ++x)
-            fb.plot(vec(x,y), (-x-y) & 0xF);
+        for (unsigned y = 0; y < 16; ++y)
+            for (unsigned x = 0; x < 16; ++x)
+                fb.plot(vec(x,y), (-x-y) & 0xF);
+    }
 
     unsigned frame = 0;
     while (!assetLoader.isComplete()) {
+
+        for (unsigned cube = 0; cube < cubeCount; cube++) {
 
             // Animate the horizontal window, to show progress
             unsigned p = 1 + assetLoader.cubeProgress(cube, LCD_width - 1);
@@ -85,6 +90,7 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
             cmap.fill(bg);
             for (unsigned i = 0; i < 8; i++)
                 cmap[(frame + i) & 15] = bg.lerp(fg, i << 5);
+        }
 
         // Throttle our frame rate, to load assets faster
         for (unsigned i = 0; i != 4; ++i)
