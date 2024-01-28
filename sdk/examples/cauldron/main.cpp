@@ -425,6 +425,7 @@ private:
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
             potIngredients[i] = MAX_INGREDIENTS;
+            potMixture = POTION_NONE;
         }
     }
 
@@ -485,8 +486,6 @@ private:
         }
 
         LOG("MIX: %i", potMixture);
-
-        clearPotIngredients();
     }
     
     void onTouchOrRelease(unsigned id)
