@@ -124,7 +124,7 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
             }
             System::paint();
 
-            if (textDrawCount % 2 == 0)
+            if (textDrawCount == 0 || textDrawCount % (charRate) == 0)
                 playSfx(sfx);
             textDrawCount++;
         }

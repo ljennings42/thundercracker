@@ -317,7 +317,7 @@ public:
             }
         }
         else {
-            //for (unsigned i=0; i < hold; i++) System::paint(); // pause to read text without fade
+            for (unsigned i=0; i < hold; i++) System::paint(); // pause to read text without fade
             textMode = true;
         }
     }
