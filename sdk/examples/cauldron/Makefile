@@ -4,7 +4,7 @@ include $(SDK_DIR)/Makefile.defs
 
 OBJS = $(ASSETS).gen.o main.o loader.o textsfx.o
 ASSETDEPS += images/*.png $(ASSETS).lua
-CCFLAGS += -DCUBE_ALLOCATION=12
+CCFLAGS += -DCUBE_ALLOCATION=6
 CDEPS += *.h
 
 # build assets.html to proof stir-processed assets.

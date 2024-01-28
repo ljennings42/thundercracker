@@ -43,7 +43,6 @@ static Vector2<T> lerp(Vector2<T> start, Vector2<T> end, double t) {
     Vector2<T> result;
     result.x = lerp(start.x, end.x, t);
     result.y = lerp(start.y, end.y, t);
-    LOG("(%f, %f) -> (%f, %f) | x: %f y: %f", start.x, start.y, end.x, end.y, result.x, result.y);
     return  result;
 }
 
@@ -105,7 +104,8 @@ public:
         ItemAnimation mixedAnimation;
     } players[CUBE_ALLOCATION];
 
-    Ingredient pot_ingredients[CUBE_ALLOCATION] = {};
+    Ingredient potIngredients[CUBE_ALLOCATION] = {};
+    ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
     Potion pot_mixture;
 
     void install()
@@ -123,42 +123,40 @@ public:
 
     void drawCauldronDebugIngredients() {
         // clearScreen(0);
-        vid[0].initMode(BG0_ROM);
+        vid[CAULDRON_ID].initMode(BG0_ROM);
         String<128> str;
         str << "CAULDRON\n";
         for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            str << ingredientToString(pot_ingredients[i]) << "\n";
+            str << ingredientToString(potIngredients[i]) << "\n";
         }
-        vid[0].bg0rom.text(vec(1, 2), str);
+        vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
     }
 
     void loadPotionSprite() {
-        CubeID cube(0);
-        vid[cube].initMode(BG0_BG1);
-        vid[cube].attach(cube);
-        vid[0].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
+        CubeID cube(CAULDRON_ID);
+        vid[cube].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
         switch(pot_mixture) {
             case VITALITY :
-                vid[0].bg1.image(vec(0,0), PotionVitality, 0);
+                vid[cube].bg1.image(vec(0,0), PotionVitality, 0);
                 break;
             case LOVE :
-                vid[0].bg1.image(vec(0,0), PotionLove, 0);
+                vid[cube].bg1.image(vec(0,0), PotionLove, 0);
                 break;
             case POISONING :
-                vid[0].bg1.image(vec(0,0), PotionPoison, 0);
+                vid[cube].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
             case DROWSINESS :
-                vid[0].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                vid[cube].bg1.image(vec(0,0), PotionDrowsiness, 0);
                 break;
             case FLIGHT :
-                vid[0].bg1.image(vec(0,0), PotionFlight, 0);
+                vid[cube].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
             case NEUTRAL:
-                vid[0].bg1.image(vec(0,0), PotionNeutral, 0);
+                vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
             default :
-                vid[0].bg1.eraseMask();
+                vid[cube].bg1.eraseMask();
                 break;
         }
     }
@@ -188,7 +186,7 @@ public:
             if (animation->time >= 1) {
                 animation->state = ANIMATE_ITEM_NEAR;
                 animation->time = 0;
-                drawPlayer(id); // render player (will update item sprite)
+                drawSprites(id); // render player (will update item sprite)
             }
         } else if (animation->state == ANIMATE_ITEM_NEAR) {
             animation->offset = lerp(targetPos, ZERO_VECTOR, animation->time);
@@ -196,7 +194,7 @@ public:
             if (animation->time >= 1) {
                 animation->state = ANIMATE_ITEM_NEUTRAL;
                 animation->time = 0;
-                drawPlayer(id); // render player (will update item sprite)
+                drawSprites(id); // render player (will update item sprite)
             }
         } else {
             animation->time = 0;
@@ -204,7 +202,7 @@ public:
         }
     }
 
-    void animate(unsigned id, TimeDelta timeDelta) {
+    void animatePlayerItems(unsigned id, TimeDelta timeDelta) {
         animateItem(id, &players[id].leftAnimation, 64, timeDelta);
         animateItem(id, &players[id].rightAnimation, 64, timeDelta);
         animateItem(id, &players[id].mixedAnimation, 128, timeDelta);
@@ -217,6 +215,13 @@ public:
         }
     }
 
+    void animateCauldronItems(TimeDelta timeDelta) {
+        for (unsigned i = 0; i < arraysize(potItemAnimations); i++) {
+            animateItem(CAULDRON_ID, &potItemAnimations[i], 128, timeDelta*0.5);
+            vid[CAULDRON_ID].sprites[i].move(CENTER_ITEM_CENTER - ITEM_CENTER + potItemAnimations[i].offset);
+        }
+    }
+
 private:
     void onConnect(unsigned id)
     {
@@ -226,7 +231,7 @@ private:
         LOG("Cube %d connected\n", id);
 
         // init ingredients if player
-        if (id > 0) {
+        if (id > CAULDRON_ID) {
             players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
             players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
@@ -234,7 +239,7 @@ private:
         players[id].leftAnimation.animateDirection = LEFT;
         players[id].rightAnimation.animateDirection = RIGHT;
 
-        vid[id].initMode(id == 0 ? BG0_BG1 : BG0_SPR_BG1);
+        vid[id].initMode(BG0_SPR_BG1);
         vid[id].attach(id);
         motion[id].attach(id);
 
@@ -242,11 +247,9 @@ private:
         onAccelChange(cube);
         onTouchOrRelease(cube);
 
-        if (id == 0) {
-            // printCauldronDebugIngredients();
-        } else {
+        if (id > CAULDRON_ID) {
             vid[id].bg0.image(vec(0,0), FloorBg, 0);
-            drawPlayer(id);
+            drawSprites(id);
         }
     }
 
@@ -265,7 +268,19 @@ private:
         return result;
     }
 
-    void drawPlayer(unsigned id) {
+    void drawSprites(unsigned id) {
+        if (id == CAULDRON_ID) {
+            for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+                if (potItemAnimations[i].state != ANIMATE_ITEM_NEUTRAL) {
+                    vid[CAULDRON_ID].sprites[i].setImage(ingredientToImage(potIngredients[i]), 0);
+                } else {
+                    vid[CAULDRON_ID].sprites[i].hide();
+                }
+                vid[CAULDRON_ID].sprites[i].move(CENTER_ITEM_CENTER - ITEM_CENTER + potItemAnimations[i].offset);
+            }
+            return;
+        }
+
         if (players[id].mixedItem || players[id].mixedAnimation.state != ANIMATE_ITEM_NEUTRAL) {
             LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
             if (players[id].mixedItem) {
@@ -387,19 +402,19 @@ private:
             players[id].rightItem = INGREDIENT_NONE;
         }
 
-        drawPlayer(id);
+        drawSprites(id);
     }
 
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            pot_ingredients[i] = MAX_INGREDIENTS;
+            potIngredients[i] = MAX_INGREDIENTS;
             pot_mixture = POTION_NONE;
         }
     }
 
     bool potContainsIngredient(Ingredient ingredient) {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            if (pot_ingredients[i] == ingredient) {
+            if (potIngredients[i] == ingredient) {
                 return true;
             }
         }
@@ -477,8 +492,7 @@ private:
 
             auto tilt = motion[id].tilt;
 
-            if (id == 0) {
-                // cauldron
+            if (id == CAULDRON_ID) {
                 if (motion[id].shake) {
                     // cauldron shake
                     performMixIngredients();
@@ -503,27 +517,32 @@ private:
     {
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
-        if (firstID == 0 || secondID == 0) { // one of the cubes is the cauldron
-            unsigned playerID = firstID == 0 ? secondID : firstID;
-            unsigned playerSide = firstID == 0 ? secondSide : firstSide;
+        if (firstID == CAULDRON_ID || secondID == CAULDRON_ID) { // one of the cubes is the cauldron
+            unsigned playerID = firstID == CAULDRON_ID ? secondID : firstID;
+            unsigned playerSide = firstID == CAULDRON_ID ? secondSide : firstSide;
+            unsigned cauldronSide = firstID == CAULDRON_ID ? firstSide : secondSide;
 
             if (playerSide == LEFT && players[playerID].leftItem) {
                 // pour left item into cauldron
-                pot_ingredients[playerID] = players[playerID].leftItem;
+                potIngredients[playerID] = players[playerID].leftItem;
                 players[playerID].leftItem = INGREDIENT_NONE;
                 players[playerID].leftAnimation.state = ANIMATE_ITEM_AWAY;
             } else if (playerSide == RIGHT && players[playerID].rightItem) {
                 // pour right item into cauldron
-                pot_ingredients[playerID] = players[playerID].rightItem;
+                potIngredients[playerID] = players[playerID].rightItem;
                 players[playerID].rightItem = INGREDIENT_NONE;
                 players[playerID].rightAnimation.state = ANIMATE_ITEM_AWAY;
             } else if (players[playerID].mixedItem) {
                 // pour mixed item into cauldron
-                pot_ingredients[playerID] = players[playerID].mixedItem;
+                potIngredients[playerID] = players[playerID].mixedItem;
                 players[playerID].mixedItem = INGREDIENT_NONE;
                 players[playerID].mixedAnimation.state = ANIMATE_ITEM_AWAY;
                 players[playerID].mixedAnimation.animateDirection = playerSide;
             }
+
+            potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
+            potItemAnimations[playerID].animateDirection = cauldronSide;
+            vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
         } else {
             // players initiate a trade
 
@@ -571,9 +590,10 @@ void main()
 
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
-        vid[CAULDRON_ID].initMode(BG0_BG1);
+        vid[CAULDRON_ID].initMode(BG0_SPR_BG1);
         vid[CAULDRON_ID].attach(CAULDRON_ID);
     }
+
 
     TimeStep ts;
     while (1) {
@@ -583,11 +603,13 @@ void main()
         else {
             unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
             vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, frame);
+            game.animateCauldronItems(ts.delta());
             game.loadPotionSprite();
         }
 
-        for (unsigned i = 0; i < arraysize(game.players); i++)
-            game.animate(i, ts.delta());
+        for (unsigned i = 0; i < arraysize(game.potItemAnimations); i++)
+            game.animatePlayerItems(i, ts.delta());
+
 
         System::paint();
         ts.next();
