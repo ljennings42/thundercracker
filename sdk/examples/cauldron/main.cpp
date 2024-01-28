@@ -110,6 +110,7 @@ public:
     Ingredient potIngredients[CUBE_ALLOCATION] = {};
     ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
     Potion potMixture;
+    Potion prompt = LOVE;
     bool textMode = false;
     bool isIntroTextDone = false;
 
@@ -278,6 +279,9 @@ public:
     }
 
     void forceDraw(unsigned id) {
+        if (id == CAULDRON_ID) {
+            _prevPotMixture = (Potion)-1;
+        }
         if (id > CAULDRON_ID) {
             vid[id].bg0.image(vec(0,0), FloorBg, 0);
             drawSprites(id);
@@ -394,7 +398,7 @@ private:
             }
             // RIGHT
             {
-                LOG("PLAYER %d RIGHT: %d\n", id, players[id].rightItem);
+                // LOG("PLAYER %d RIGHT: %d\n", id, players[id].rightItem);
                 if (players[id].rightItem) {
                     vid[id].sprites[1].setImage(ingredientToImage(players[id].rightItem), 0);
                     vid[id].sprites[1].move(RIGHT_ITEM_CENTER - ITEM_CENTER + players[id].rightAnimation.offset);
@@ -509,9 +513,9 @@ private:
 
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            potIngredients[i] = MAX_INGREDIENTS;
-            potMixture = POTION_NONE;
+            potIngredients[i] = INGREDIENT_NONE;
         }
+        potMixture = POTION_NONE;
     }
 
     bool potContainsIngredient(Ingredient ingredient) {
@@ -613,16 +617,29 @@ private:
                     // cauldron shake
                     performMixIngredients();
                 } else if (tilt.z == -1) {
-                    // empty cauldron
-                    const char *potionLines[] = {
-                            "I CRAVE A ",
-                            potionToString(gRandom.randint(VITALITY, LAUGHTER)),
+                    // empty cauldron and check how player did
+                    clearPotIngredients();
+                    prompt = gRandom.randint(VITALITY, LAUGHTER);
+                    const char *successLines[] = {
+                            "EXCELENT!. I CRAVE A ",
+                            potionToString(prompt),
                             "POTION",
                             "please tap to continue..."
                     };
 
-                    clearPotIngredients();
-                    showText(potionLines, 4, false);
+                    const char *failLines[] = {
+                            "FOOL!",
+                            "THATS NOT WHAT I WANTED.",
+                            "BETTER MAKE ME A ",
+                            potionToString(prompt),
+                            "POTION. Tap to continue"
+                    };
+
+                    if (prompt == potMixture) {
+                        showText(successLines, 4, false);
+                    } else {
+                        showText(failLines, 5, false);
+                    }
                     resetPlayerItems();
                 }
             }
@@ -769,7 +786,7 @@ void main()
     game.install();
 
     const char *introLines[] = {
-            "A patron enters your bar.",
+            "A patron enters the shop.",
             "He wants a love potion!",
             "But it's your first day",
             "on the job..."
@@ -792,10 +809,12 @@ void main()
             game.drawCauldronDebugIngredients();
         }
         else {
-            unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
-            vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, frame);
-            game.animateCauldronItems(ts.delta());
-            game.loadPotionSprite();
+            if (!game.textMode) {
+                unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
+                vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, frame);
+                game.animateCauldronItems(ts.delta());
+                game.loadPotionSprite();
+            }
         }
 
         for (unsigned i = 0; i < arraysize(game.potItemAnimations); i++)
