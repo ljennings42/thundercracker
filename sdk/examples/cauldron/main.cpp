@@ -417,7 +417,7 @@ private:
 
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            pot_ingredients[i] = MAX_INGREDIENTS;
+            potIngredients[i] = MAX_INGREDIENTS;
         }
     }
 
