@@ -39,7 +39,11 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, unsigned cubeCount)
          * Must draw to the buffer after attaching it to a cube, so we
          * know how to relocate this image's tiles for the cube in question.
          */
-        vid[cube].bg0.image(vec(0,0), LoadingBG);
+        if (cube == 0) {
+            vid[cube].bg0.image(vec(0, 0), LoadingBG);
+        } else {
+            vid[cube].bg0.image(vec(0, 0), PlayerLoadingBG);
+        }
     }
 
     // Draw the background
