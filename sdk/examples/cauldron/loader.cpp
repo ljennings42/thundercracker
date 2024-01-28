@@ -39,7 +39,7 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
      * Must draw to the buffer after attaching it to a cube, so we
      * know how to relocate this image's tiles for the cube in question.
      */
-    vid[cube].bg0.image(vec(0,0), FloorBg);
+    vid[cube].bg0.image(vec(0,0), LoadingBG);
 
     // Draw the background
     System::paint();
@@ -78,7 +78,7 @@ void MyLoader::load(AssetGroup &group, AssetSlot slot, CubeID cube)
 //                p);
 
             // Animate the colormap at a steady rate
-            const RGB565 bg = RGB565::fromRGB(0xff7000);
+            const RGB565 bg = RGB565::fromRGB(0xB770D2);
             const RGB565 fg = RGB565::fromRGB(0xffffff);
 
             auto &cmap = vid[cube].colormap;

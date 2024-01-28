@@ -3,9 +3,9 @@
 IconAssets = group{quality=9.95}
 Icon = image{"images/icon.png"}
 
--- Loading screen: Divided into two asset groups
 
 BootstrapGroup = group{ quality=5 }
+LoadingBG = image{"images/TitleScreen_BG.png"}
 FloorBg = image{"images/Floor_BG.png"}
 Honey = image{"images/Ingredients/Honey.png", pinned=true}
 FrogLegs = image{"images/Ingredients/FrogLegs.png", pinned=true}
