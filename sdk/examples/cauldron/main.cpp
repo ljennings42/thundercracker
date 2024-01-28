@@ -107,8 +107,11 @@ public:
         ItemAnimation mixedAnimation;
     } players[CUBE_ALLOCATION];
 
-    Ingredient potIngredients[CUBE_ALLOCATION] = {};
-    ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
+    Array<Ingredient, CUBE_ALLOCATION*3> potIngredients;
+
+    ItemAnimation potItemAnimations[4] = {}; // one for each side
+    Ingredient potAnimatingItems[4] = {};
+
     Potion potMixture;
     Potion prompt = LOVE;
     bool textMode = false;
@@ -134,7 +137,7 @@ public:
         String<128> str;
         if (potMixture == 0) {
             str << "CAULDRON\n";
-            for (int i = 1; i < CUBE_ALLOCATION; i++) {
+            for (int i = 1; i < potIngredients.count(); i++) {
                 str << ingredientToString(potIngredients[i]) << "\n";
             }
             vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
@@ -203,11 +206,10 @@ public:
                 };
                 AssetImage barImage;
 
-                unsigned ingredientCount = countPotIngredients();
-                if (ingredientCount > 4) {
-                    barImage = progressImages[4];
+                if (potIngredients.count() > 3) {
+                    barImage = progressImages[3];
                 } else {
-                    barImage = progressImages[ingredientCount];
+                    barImage = progressImages[potIngredients.count()];
                 }
 
                 vid[CAULDRON_ID].bg1.image(vec(0, 0), barImage, 0);
@@ -366,9 +368,9 @@ private:
 
     void drawSprites(unsigned id) {
         if (id == CAULDRON_ID) {
-            for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            for (unsigned i = 0; i < 4; i++) {
                 if (potItemAnimations[i].state != ANIMATE_ITEM_NEUTRAL) {
-                    vid[CAULDRON_ID].sprites[i].setImage(ingredientToImage(potIngredients[i]), 0);
+                    vid[CAULDRON_ID].sprites[i].setImage(ingredientToImage(potAnimatingItems[i]), 0);
                 } else {
                     vid[CAULDRON_ID].sprites[i].hide();
                 }
@@ -502,25 +504,14 @@ private:
         drawSprites(id);
     }
 
-    unsigned countPotIngredients() {
-        unsigned result = 0;
-        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
-            if (potIngredients[i]) {
-                result++;
-            }
-        }
-        return result;
-    }
 
     void clearPotIngredients() {
-        for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            potIngredients[i] = INGREDIENT_NONE;
-        }
+        potIngredients.clear();
         potMixture = POTION_NONE;
     }
 
     bool potContainsIngredient(Ingredient ingredient) {
-        for (int i = 0; i < CUBE_ALLOCATION; i++) {
+        for (int i = 0; i < potIngredients.count(); i++) {
             if (potIngredients[i] == ingredient) {
                 return true;
             }
@@ -715,28 +706,29 @@ private:
 
             if (playerSide == LEFT && players[playerID].leftItem) {
                 // pour left item into cauldron
-                potIngredients[playerID] = players[playerID].leftItem;
+                potIngredients.append(players[playerID].leftItem);
                 players[playerID].leftItem = INGREDIENT_NONE;
                 players[playerID].leftAnimation.state = ANIMATE_ITEM_AWAY;
                 shouldAnimateItemOnCauldron = true;
             } else if (playerSide == RIGHT && players[playerID].rightItem) {
                 // pour right item into cauldron
-                potIngredients[playerID] = players[playerID].rightItem;
+                potIngredients.append(players[playerID].rightItem);
                 players[playerID].rightItem = INGREDIENT_NONE;
                 players[playerID].rightAnimation.state = ANIMATE_ITEM_AWAY;
                 shouldAnimateItemOnCauldron = true;
             } else if (players[playerID].mixedItem) {
                 // pour mixed item into cauldron
-                potIngredients[playerID] = players[playerID].mixedItem;
+                potIngredients.append(players[playerID].mixedItem);
                 players[playerID].mixedItem = INGREDIENT_NONE;
                 players[playerID].mixedAnimation.state = ANIMATE_ITEM_AWAY;
                 players[playerID].mixedAnimation.animateDirection = playerSide;
                 shouldAnimateItemOnCauldron = true;
             }
             if (shouldAnimateItemOnCauldron) {
-                potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
-                potItemAnimations[playerID].animateDirection = cauldronSide;
-                vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
+                potAnimatingItems[cauldronSide] = potIngredients[potIngredients.count()-1];
+                potItemAnimations[cauldronSide].state = ANIMATE_ITEM_NEAR;
+                potItemAnimations[cauldronSide].animateDirection = cauldronSide;
+                vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potAnimatingItems[cauldronSide]), 0);
             }
         }
         else if (isConnectedNeighorhood()) {
