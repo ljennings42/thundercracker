@@ -152,11 +152,11 @@ public:
 
             if ((*leftAnimation).offset.x >= 0) {
                 (*leftAnimation).state = ANIMATE_ITEM_NEUTRAL;
+                drawPlayer(id);
             }
         } else {
             (*leftAnimation).frame = 0;
             (*leftAnimation).offset.x = 0;
-            drawPlayer(id);
         }
 
         ItemAnimation* rightAnimation = &players[id].rightAnimation;
@@ -175,11 +175,11 @@ public:
 
             if ((*rightAnimation).offset.x <= 0) {
                 (*rightAnimation).state = ANIMATE_ITEM_NEUTRAL;
+                drawPlayer(id);
             }
         } else {
             (*rightAnimation).frame = 0;
             (*rightAnimation).offset.x = 0;
-            drawPlayer(id);
         }
 
         if (players[id].mixedItem) {
@@ -457,10 +457,12 @@ private:
                 // pour left item into cauldron
                 pot_ingredients[playerID] = players[playerID].leftItem;
                 players[playerID].leftItem = INGREDIENT_NONE;
+                players[playerID].leftAnimation.state = ANIMATE_ITEM_AWAY;
             } else if (playerSide == RIGHT && players[playerID].rightItem) {
                 // pour right item into cauldron
                 pot_ingredients[playerID] = players[playerID].rightItem;
                 players[playerID].rightItem = INGREDIENT_NONE;
+                players[playerID].rightAnimation.state = ANIMATE_ITEM_AWAY;
             } else if (players[playerID].mixedItem) {
                 // pour mixed item into cauldron
                 pot_ingredients[playerID] = players[playerID].mixedItem;
