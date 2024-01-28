@@ -10,17 +10,18 @@
 
 using namespace Sifteo;
 
-void fadeOut(Colormap *cm, const unsigned speed, const unsigned hold);
+void fadeOut(Colormap *cm[], const unsigned cmsCount, const unsigned speed, const unsigned hold);
 
 RGB565 makeColor(uint8_t);
 
-void initDrawing(VideoBuffer*);
+void solidBg(VideoBuffer*, unsigned id);
+void initLetterbox(VideoBuffer*);
 
 struct TextRenderer {
-    FB128Drawable &fb;
+    FB128Drawable* fb;
     UByte2 position;
 
-    TextRenderer(FB128Drawable &fb) : fb(fb) {}
+//    TextRenderer(FB128Drawable* fb) : fb(fb) {}
 
     void drawGlyph(char);
     void drawText(const char*);
@@ -35,8 +36,8 @@ void playSfx(const AssetAudio&);
 // location is a vector<unsigned> of coords indicating where to place the text
 // charRate is the number of chars to print at a time
 // if drawCentered is true, it will ignore location.x
-void typeText(const char*, TextRenderer, Vector2<int>, const AssetAudio&, unsigned textUpdateDelay=2, unsigned charRate=2, bool drawCentered=false);
+void typeText(const char*, TextRenderer*[], const unsigned, Vector2<int>, const AssetAudio&, unsigned textUpdateDelay=2, unsigned charRate=2, bool drawCentered=false);
 
-void typeLines(const char **lines, unsigned numLines, TextRenderer tr, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered);
+void typeLines(const char **lines, unsigned numLines, TextRenderer trs[], const unsigned trsCount, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered);
 
 #endif

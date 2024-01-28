@@ -77,6 +77,7 @@ public:
         POISONING,
         DROWSINESS,
         HASTE,
+        LAUGHTER,
         NEUTRAL,
     };
 
@@ -109,6 +110,8 @@ public:
     Ingredient potIngredients[CUBE_ALLOCATION] = {};
     ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
     Potion potMixture;
+
+    bool isIntroTextDone = false;
 
     void install()
     {
@@ -156,13 +159,15 @@ public:
                 vid[cube].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
             case DROWSINESS :
-                vid[cube].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                vid[cube].bg1.image(vec(0,0), PotionSleep, 0);
                 break;
             case FLIGHT :
                 vid[cube].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
-                vid[cube].bg1.image(vec(0,0), PotionSpeed, 0);
+                vid[cube].bg1.image(vec(0,0), PotionHaste, 0);
+            case LAUGHTER:
+                vid[cube].bg1.image(vec(0,0), PotionLaughter, 0);
             case NEUTRAL:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
@@ -233,6 +238,13 @@ public:
         }
     }
 
+    void forceDraw(unsigned id) {
+        if (id > CAULDRON_ID) {
+            vid[id].bg0.image(vec(0,0), FloorBg, 0);
+            drawSprites(id);
+        }
+    }
+
 private:
     void onConnect(unsigned id)
     {
@@ -250,18 +262,11 @@ private:
         players[id].leftAnimation.animateDirection = LEFT;
         players[id].rightAnimation.animateDirection = RIGHT;
 
-        vid[id].initMode(BG0_SPR_BG1);
-        vid[id].attach(id);
         motion[id].attach(id);
 
         // Draw initial state for all sensors
         onAccelChange(cube);
         onTouchOrRelease(cube);
-
-        if (id > CAULDRON_ID) {
-            vid[id].bg0.image(vec(0,0), FloorBg, 0);
-            drawSprites(id);
-        }
     }
 
     template <unsigned tCapacity>
@@ -352,6 +357,7 @@ private:
             case POISONING:     str << "POISONING"; break;
             case DROWSINESS:    str << "DROWSINESS"; break;
             case HASTE:         str << "HASTE"; break;
+            case LAUGHTER:      str << "LAUGHTER"; break;
             case NEUTRAL:       str << "NEUTRAL"; break;
 
             default:            str << "ERROR"; break;
@@ -468,6 +474,12 @@ private:
                 && potContainsIngredient(DRAGONS_BREATH)
                 ){
             potMixture = HASTE;
+        } else if (
+                potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(HONEY)
+                ){
+            potMixture = LAUGHTER;
         } else {
             potMixture = NEUTRAL;
         }
@@ -527,9 +539,12 @@ private:
          * example) the system can't do the repaint all on its own.
          */
 
-        if (cube == CAULDRON_ID)
+        if (!isIntroTextDone) {
             LOG("Refresh event on cube %d\n", cube);
-            initDrawing(&vid[CAULDRON_ID]);
+            solidBg(&vid[cube], cube);
+            System::paint();
+            initLetterbox(&vid[cube]);
+        }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
@@ -565,28 +580,33 @@ private:
             unsigned playerID = firstID == CAULDRON_ID ? secondID : firstID;
             unsigned playerSide = firstID == CAULDRON_ID ? secondSide : firstSide;
             unsigned cauldronSide = firstID == CAULDRON_ID ? firstSide : secondSide;
+            bool shouldAnimateItemOnCauldron = false;
 
             if (playerSide == LEFT && players[playerID].leftItem) {
                 // pour left item into cauldron
                 potIngredients[playerID] = players[playerID].leftItem;
                 players[playerID].leftItem = INGREDIENT_NONE;
                 players[playerID].leftAnimation.state = ANIMATE_ITEM_AWAY;
+                shouldAnimateItemOnCauldron = true;
             } else if (playerSide == RIGHT && players[playerID].rightItem) {
                 // pour right item into cauldron
                 potIngredients[playerID] = players[playerID].rightItem;
                 players[playerID].rightItem = INGREDIENT_NONE;
                 players[playerID].rightAnimation.state = ANIMATE_ITEM_AWAY;
+                shouldAnimateItemOnCauldron = true;
             } else if (players[playerID].mixedItem) {
                 // pour mixed item into cauldron
                 potIngredients[playerID] = players[playerID].mixedItem;
                 players[playerID].mixedItem = INGREDIENT_NONE;
                 players[playerID].mixedAnimation.state = ANIMATE_ITEM_AWAY;
                 players[playerID].mixedAnimation.animateDirection = playerSide;
+                shouldAnimateItemOnCauldron = true;
             }
-
-            potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
-            potItemAnimations[playerID].animateDirection = cauldronSide;
-            vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
+            if (shouldAnimateItemOnCauldron) {
+                potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
+                potItemAnimations[playerID].animateDirection = cauldronSide;
+                vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
+            }
         }
         else if (isConnectedNeighorhood()) {
             // Players want new items
@@ -596,8 +616,9 @@ private:
             for (int id = 1; id < PLAYER_TOTAL; id++) {
                 players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
                 players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
+                players[id].mixedItem = INGREDIENT_NONE;
                 drawSprites(id);
-                LOG("Clearing igredients for Player: %d\n", id);
+                // LOG("Clearing igredients for Player: %d\n", id);
             }
         }
         else {
@@ -638,18 +659,28 @@ private:
 };
 
 void showText() {
-    TextRenderer tr(vid[CAULDRON_ID].fb128);
-    initDrawing(&vid[CAULDRON_ID]);
+    TextRenderer trs[CUBE_ALLOCATION];
+    Colormap *cms[CUBE_ALLOCATION];
 
-    tr.fb.fill(0);
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        trs[i].fb = &vid[i].fb128;
+        cms[i] = &vid[i].colormap;
+        solidBg(&vid[i], i);
+    }
+    System::paint();
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        initLetterbox(&vid[i]);
+        trs[i].fb->fill(0);
+    }
+
     const char *lines[] = {
             "A patron enters your bar.",
             "He wants a love potion!",
             "But it's your first day",
             "on the job..."
     };
-    typeLines(lines, 4, tr, vec(0, 2), Beep, 10, 1, true);
-    fadeOut(&vid[CAULDRON_ID].colormap, 4, 100);
+    typeLines(lines, 4, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
+    fadeOut(cms, CUBE_ALLOCATION, 4, 100);
     LOG("Finished typing");
 }
 
@@ -662,12 +693,17 @@ void main()
     bool debug = false;
 
     if (!debug) {
-        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         showText();
-        vid[CAULDRON_ID].initMode(BG0_SPR_BG1);
-        vid[CAULDRON_ID].attach(CAULDRON_ID);
+        game.isIntroTextDone = true;
     }
 
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        vid[i].initMode(BG0_SPR_BG1);
+        vid[i].attach(i);
+        motion[i].attach(i);
+        game.forceDraw(i);
+    }
 
     TimeStep ts;
     while (1) {
