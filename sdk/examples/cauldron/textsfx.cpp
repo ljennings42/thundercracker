@@ -6,7 +6,7 @@
 
 using namespace Sifteo;
 
-void fadeOut(Colormap *cm[], const unsigned cmsCount, const unsigned speed, const unsigned hold)
+void fadeOut(Colormap *cm[], const unsigned cmsCount, const int speed, const unsigned hold)
 {
     LOG(("~ FADE ~\n"));
 
@@ -14,15 +14,14 @@ void fadeOut(Colormap *cm[], const unsigned cmsCount, const unsigned speed, cons
     for (unsigned i = 0; i < hold; i++)
         System::paint();
 
-    for (unsigned i = 0; i < 0x100; i += speed) {
+    for (int i = 255; i >= 0; i -= speed) {
         for (unsigned j = 0; j < cmsCount; j++) {
-            (*cm[j])[1] = makeColor(255 - i);
+            (*cm[j])[1] = makeColor(i);
         }
         System::paint();
     }
 
-    for (unsigned i = 0; i < hold/3; i++)
-        System::paint();
+    LOG("Finished Fade\n");
 }
 
 void TextRenderer::drawGlyph(char ch) {
@@ -90,6 +89,8 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
     int endIndex = 0; // index of str to print to
     int count = 0;
     while (str[endIndex] != '\0') {
+
+        // reset x position of text for each redraw
         for (unsigned i = 0; i < trsCount; i++) {
             trs[i].position.x = location.x;
         }
@@ -129,7 +130,7 @@ RGB565 makeColor(uint8_t alpha)
 {
     // Linear interpolation between foreground and background
 
-    const RGB565 bg = RGB565::fromRGB(0x31316f);
+    const RGB565 bg = RGB565::fromRGB(0x0);
     const RGB565 fg = RGB565::fromRGB(0xc7c7fc);
 
     return bg.lerp(fg, alpha);
@@ -157,3 +158,4 @@ void initLetterbox(VideoBuffer* myVidBuf)
     myVidBuf->initMode(FB128, 40, 48);
     myVidBuf->colormap[1] = makeColor((unsigned)255);
 }
+

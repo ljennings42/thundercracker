@@ -10,7 +10,7 @@
 
 using namespace Sifteo;
 
-void fadeOut(Colormap *cm[], const unsigned cmsCount, const unsigned speed, const unsigned hold);
+void fadeOut(Colormap *cm[], const unsigned cmsCount, const int speed, const unsigned hold);
 
 RGB565 makeColor(uint8_t);
 

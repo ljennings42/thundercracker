@@ -288,13 +288,14 @@ public:
         drawSprites(id);
     }
 
-    void showText(const char* lines[], unsigned numLines) {
+    void showText(const char* lines[], unsigned numLines, int charRate=1, unsigned hold=100) {
         TextRenderer trs[CUBE_ALLOCATION];
         Colormap *cms[CUBE_ALLOCATION];
 
         for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
             trs[i].fb = &vid[i].fb128;
             cms[i] = &vid[i].colormap;
+            (*cms[i])[1] = makeColor(255); // reset to white
             solidBg(&vid[i], i);
         }
         System::paint();
@@ -302,8 +303,8 @@ public:
             initLetterbox(&vid[i]);
             trs[i].fb->fill(0);
         }
-        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
-        fadeOut(cms, CUBE_ALLOCATION, 4, 100);
+        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, charRate, true);
+        fadeOut(cms, CUBE_ALLOCATION, 4, hold);
         LOG("Finished typing");
 
         // return video modes back to normal
@@ -747,17 +748,32 @@ private:
     }
 };
 
+const char *introLines[] = {
+        "A patron enters your bar.",
+        "He wants a love potion!",
+        "But it's your first day",
+        "on the job..."
+};
+const char *tutLines1[] = {
+        "Trade ingredients by",
+        "bumping cubes!",
+        "Shake to mix ingredients!"
+};
+const char *tutLines2[] = {
+        "Put 3 items in the",
+        "cauldron, shake and",
+        "see what you create!"
+};
+const char *tutLines3[] = {
+        "Place all cubes next",
+        "to each other to get",
+        "new items!"
+};
+
 void main()
 {
     static CauldronGame game;
     game.install();
-
-    const char *introLines[] = {
-            "A patron enters your bar.",
-            "He wants a love potion!",
-            "But it's your first day",
-            "on the job..."
-    };
 
     // Toggle this for debug or graphic mode for the cauldron cube
     bool debug = false;
@@ -766,9 +782,21 @@ void main()
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         if (showTextIntro)
-            game.showText(introLines, 4);
+            game.showText(introLines, 4, 1);
+            game.showText(tutLines1, 3, 3);
+            game.showText(tutLines2, 3, 3);
+            game.showText(tutLines3, 3, 3);
         game.isIntroTextDone = true;
     }
+
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        vid[i].initMode(BG0_SPR_BG1);
+        vid[i].attach(i);
+        motion[i].attach(i);
+        game.forceDraw(i);
+    }
+
+    //AudioTracker::play(Music)
 
     TimeStep ts;
     while (1) {
