@@ -104,6 +104,17 @@ public:
             onConnect(cube);
     }
 
+    void drawCauldronDebugIngredients() {
+        // clearScreen(0);
+        vid[0].initMode(BG0_ROM);
+        String<128> str;
+        str << "CAULDRON\n";
+        for (int i = 1; i < CUBE_ALLOCATION; i++) {
+            str << ingredientToString(pot_ingredients[i]) << "\n";
+        }
+        vid[0].bg0rom.text(vec(1, 2), str);
+    }
+
     void loadPotionSprite() {
         CubeID cube(0);
         vid[cube].initMode(BG0_BG1);
@@ -295,6 +306,26 @@ private:
             case NEUTRAL:       str << "NEUTRAL"; break;
 
             default:            str << "ERROR"; break;
+        }
+        return str;
+    }
+
+    String<16> ingredientToString(Ingredient ingredient) {
+        String<16> str;
+        switch (ingredient) {
+            case HONEY:             str << "HONEY\0"; break;
+            case FROG_LEGS:         str << "FROG_LEGS\0"; break;
+            case NIGHTSHADE:        str << "NIGHTSHADE\0"; break;
+            case LAVENDER:          str << "LAVENDER\0"; break;
+
+            case DRAGONS_BREATH:    str << "DRAGONS_BREATH\0"; break;
+            case HEART_ORGAN:       str << "HEART_ORGAN\0"; break;
+            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER\0"; break;
+            case HARPY_BLOOD:       str << "HARPY_BLOOD\0"; break;
+            case DREAM_CLOUDS:      str << "DREAM_CLOUDS\0"; break;
+            case COFFEE_BEANS:      str << "COFFEE_BEANS\0"; break;
+
+            default:                str << "NONE\0"; break;
         }
         return str;
     }
@@ -508,15 +539,25 @@ void main()
     static CauldronGame game;
     game.install();
 
-    cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
-    vid[CAULDRON_ID].initMode(BG0_BG1);
-    vid[CAULDRON_ID].attach(CAULDRON_ID);
+    // Toggle this for debug or graphic mode for the cauldron cube
+    bool debug = false;
+
+    if (!debug) {
+        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+        vid[CAULDRON_ID].initMode(BG0_BG1);
+        vid[CAULDRON_ID].attach(CAULDRON_ID);
+    }
 
     TimeStep ts;
     while (1) {
-        unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
-        vid[CAULDRON_ID].bg0.image(vec(0,0), Cauldron, frame);
-        game.loadPotionSprite();
+        if (debug) {
+            game.drawCauldronDebugIngredients();
+        }
+        else {
+            unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
+            vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, frame);
+            game.loadPotionSprite();
+        }
 
         for (unsigned i = 0; i < arraysize(game.players); i++)
             game.animate(i, ts.delta());
@@ -524,4 +565,5 @@ void main()
         System::paint();
         ts.next();
     }
+
 }
