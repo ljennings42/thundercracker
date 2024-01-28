@@ -196,9 +196,8 @@ public:
                 // draw cauldron fill ui if no potion
                 AssetImage progressImages[] = {
                         CauldronUIBar00,
-                        CauldronUIBar25,
-                        CauldronUIBar50,
-                        CauldronUIBar75,
+                        CauldronUIBar30,
+                        CauldronUIBar70,
                         CauldronUIBar100,
                 };
                 AssetImage barImage;

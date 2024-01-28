@@ -42,9 +42,8 @@ PotionHaste = image{"images/Potions/Potion_Haste_wtxt.png"}
 PotionVitality = image{"images/Potions/Potion_Vitality_wtxt.png"}
 PotionLaughter = image{"images/Potions/Potion_Laughter_wtxt.png"}
 CauldronUIBar00 = image{"images/UI/ProgressBar_00.png"}
-CauldronUIBar25 = image{"images/UI/ProgressBar_25.png"}
-CauldronUIBar50 = image{"images/UI/ProgressBar_50.png"}
-CauldronUIBar75 = image{"images/UI/ProgressBar_75.png"}
+CauldronUIBar30 = image{"images/UI/ProgressBar_30.png"}
+CauldronUIBar70 = image{"images/UI/ProgressBar_70.png"}
 CauldronUIBar100 = image{"images/UI/ProgressBar_100.png"}
 
 Beep = sound{ "assets/beep.wav" }
