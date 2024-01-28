@@ -819,7 +819,7 @@ void main()
             game.showText(introLines, 4, true, 1);
             game.showText(tutLines1, 3, false, 3, 150);
             game.showText(tutLines2, 3, false, 3, 150);
-            game.showText(tutLines3, 3, false, 3);
+            game.showText(tutLines3, 3, true, 3);
         game.isIntroTextDone = true;
     }
 
