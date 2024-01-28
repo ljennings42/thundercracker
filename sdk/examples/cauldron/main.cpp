@@ -18,6 +18,8 @@ static VideoBuffer vid[CUBE_ALLOCATION];
 static TiltShakeRecognizer motion[CUBE_ALLOCATION];
 static MyLoader cauldronLoader(cauldronCubeSte, MainSlot, vid);
 
+static const Float2 ZERO_VECTOR = {0, 0};
+
 static const Float2 ITEM_CENTER = {64, 64};
 static const Float2 LEFT_ITEM_CENTER = {32, 64};
 static const Float2 RIGHT_ITEM_CENTER = {96, 64};
@@ -30,6 +32,19 @@ static Metadata M = Metadata()
     .package("com.sifteo.sdk.cauldron", "1.1")
     .icon(Icon)
     .cubeRange(0, CUBE_ALLOCATION);
+
+static double lerp(double start, double end, double t) {
+    return (1 - t) * start + t * end;
+}
+
+template <typename T>
+static Vector2<T> lerp(Vector2<T> start, Vector2<T> end, double t) {
+    Vector2<T> result;
+    result.x = lerp(start.x, end.x, t);
+    result.y = lerp(start.y, end.y, t);
+    LOG("(%f, %f) -> (%f, %f) | x: %f y: %f", start.x, start.y, end.x, end.y, result.x, result.y);
+    return  result;
+}
 
 class CauldronGame {
 public:
@@ -71,8 +86,9 @@ public:
 
     struct ItemAnimation {
         AnimateItemState state;
-        unsigned frame;
+        float time;
         Float2 offset;
+        unsigned animateDirection;
     };
 
     struct Player {
@@ -135,54 +151,53 @@ public:
         }
     }
 
-    void animate(unsigned id, TimeDelta timeStep) {
-        ItemAnimation* leftAnimation = &players[id].leftAnimation;
-        if ((*leftAnimation).state == ANIMATE_ITEM_AWAY) {
-            (*leftAnimation).frame++;
-            (*leftAnimation).offset.x -= 64 * (float)timeStep;
-
-            if ((*leftAnimation).offset.x <= -64) {
-                // TODO ensure item changed
-                (*leftAnimation).state = ANIMATE_ITEM_NEAR;
-                drawPlayer(id);
-            }
-        } else if ((*leftAnimation).state == ANIMATE_ITEM_NEAR) {
-            (*leftAnimation).frame++;
-            (*leftAnimation).offset.x += 64 * (float)timeStep;
-
-            if ((*leftAnimation).offset.x >= 0) {
-                (*leftAnimation).state = ANIMATE_ITEM_NEUTRAL;
-                drawPlayer(id);
-            }
-        } else {
-            (*leftAnimation).frame = 0;
-            (*leftAnimation).offset.x = 0;
+    void animateItem(unsigned id, ItemAnimation* animation, int distance, TimeDelta timeDelta) {
+        Float2 targetPos = {0, 0};
+        switch (animation->animateDirection) {
+            case LEFT:
+                targetPos.x = -distance;
+                break;
+            case RIGHT:
+                targetPos.x = distance;
+                break;
+            case TOP:
+                targetPos.y = -distance;
+                break;
+            case BOTTOM:
+                targetPos.y = distance;
+                break;
         }
 
-        ItemAnimation* rightAnimation = &players[id].rightAnimation;
-        if ((*rightAnimation).state == ANIMATE_ITEM_AWAY) {
-            (*rightAnimation).frame++;
-            (*rightAnimation).offset.x += 64 * (float)timeStep;
+        animation->time += timeDelta;
 
-            if ((*rightAnimation).offset.x >= 64) {
-                // TODO ensure item changed
-                (*rightAnimation).state = ANIMATE_ITEM_NEAR;
-                drawPlayer(id);
+        if (animation->state == ANIMATE_ITEM_AWAY) {
+            animation->offset = lerp(ZERO_VECTOR, targetPos, animation->time);
+
+            if (animation->time >= 1) {
+                animation->state = ANIMATE_ITEM_NEAR;
+                animation->time = 0;
+                drawPlayer(id); // render player (will update item sprite)
             }
-        } else if ((*rightAnimation).state == ANIMATE_ITEM_NEAR) {
-            (*rightAnimation).frame++;
-            (*rightAnimation).offset.x -= 64 * (float)timeStep;
+        } else if (animation->state == ANIMATE_ITEM_NEAR) {
+            animation->offset = lerp(targetPos, ZERO_VECTOR, animation->time);
 
-            if ((*rightAnimation).offset.x <= 0) {
-                (*rightAnimation).state = ANIMATE_ITEM_NEUTRAL;
-                drawPlayer(id);
+            if (animation->time >= 1) {
+                animation->state = ANIMATE_ITEM_NEUTRAL;
+                animation->time = 0;
+                drawPlayer(id); // render player (will update item sprite)
             }
         } else {
-            (*rightAnimation).frame = 0;
-            (*rightAnimation).offset.x = 0;
+            animation->time = 0;
+            animation->offset = ZERO_VECTOR;
         }
+    }
 
-        if (players[id].mixedItem) {
+    void animate(unsigned id, TimeDelta timeDelta) {
+        animateItem(id, &players[id].leftAnimation, 64, timeDelta);
+        animateItem(id, &players[id].rightAnimation, 64, timeDelta);
+        animateItem(id, &players[id].mixedAnimation, 128, timeDelta);
+
+        if (players[id].mixedItem || players[id].mixedAnimation.state != ANIMATE_ITEM_NEUTRAL) {
             vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
         } else {
             vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
@@ -203,6 +218,9 @@ private:
             players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
             players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
+
+        players[id].leftAnimation.animateDirection = LEFT;
+        players[id].rightAnimation.animateDirection = RIGHT;
 
         vid[id].initMode(id == 0 ? BG0_BG1 : BG0_SPR_BG1);
         vid[id].attach(id);
@@ -236,10 +254,14 @@ private:
     }
 
     void drawPlayer(unsigned id) {
-        if (players[id].mixedItem) {
+        if (players[id].mixedItem || players[id].mixedAnimation.state != ANIMATE_ITEM_NEUTRAL) {
             LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
-            vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
-            vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+            if (players[id].mixedItem) {
+                vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
+                vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+            } else {
+                vid[id].sprites[0].hide();
+            }
             vid[id].sprites[1].hide();
         } else {
             // LEFT
@@ -467,6 +489,8 @@ private:
                 // pour mixed item into cauldron
                 pot_ingredients[playerID] = players[playerID].mixedItem;
                 players[playerID].mixedItem = INGREDIENT_NONE;
+                players[playerID].mixedAnimation.state = ANIMATE_ITEM_AWAY;
+                players[playerID].mixedAnimation.animateDirection = playerSide;
             }
         } else {
             // players initiate a trade
