@@ -104,6 +104,37 @@ public:
             onConnect(cube);
     }
 
+    void loadPotionSprite() {
+        CubeID cube(0);
+        vid[cube].initMode(BG0_BG1);
+        vid[cube].attach(cube);
+        vid[0].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
+        switch(pot_mixture) {
+            case VITALITY :
+                vid[0].bg1.image(vec(0,0), PotionVitality, 0);
+                break;
+            case LOVE :
+                vid[0].bg1.image(vec(0,0), PotionLove, 0);
+                break;
+            case POISONING :
+                vid[0].bg1.image(vec(0,0), PotionPoison, 0);
+                break;
+            case DROWSINESS :
+                vid[0].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                break;
+            case FLIGHT :
+                vid[0].bg1.image(vec(0,0), PotionFlight, 0);
+                break;
+            case HASTE:
+            case NEUTRAL:
+                vid[0].bg1.image(vec(0,0), PotionNeutral, 0);
+                break;
+            default :
+                vid[0].bg1.eraseMask();
+                break;
+        }
+    }
+
     void animate(unsigned id, TimeDelta timeStep) {
         ItemAnimation* leftAnimation = &players[id].leftAnimation;
         if ((*leftAnimation).state == ANIMATE_ITEM_AWAY) {
@@ -171,7 +202,7 @@ private:
             players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
 
-        vid[id].initMode(BG0_SPR_BG1);
+        vid[id].initMode(id == 0 ? BG0_BG1 : BG0_SPR_BG1);
         vid[id].attach(id);
         motion[id].attach(id);
 
@@ -306,6 +337,7 @@ private:
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
             pot_ingredients[i] = MAX_INGREDIENTS;
+            pot_mixture = POTION_NONE;
         }
     }
 
@@ -358,6 +390,7 @@ private:
         } else {
             pot_mixture = NEUTRAL;
         }
+
         LOG("MIX: %i", pot_mixture);
 
         clearPotIngredients();
@@ -474,13 +507,14 @@ void main()
     game.install();
 
     cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
-    vid[CAULDRON_ID].initMode(BG0);
+    vid[CAULDRON_ID].initMode(BG0_BG1);
     vid[CAULDRON_ID].attach(CAULDRON_ID);
 
     TimeStep ts;
     while (1) {
         unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
         vid[CAULDRON_ID].bg0.image(vec(0,0), Cauldron, frame);
+        game.loadPotionSprite();
 
         for (unsigned i = 0; i < arraysize(game.players); i++)
             game.animate(i, ts.delta());
