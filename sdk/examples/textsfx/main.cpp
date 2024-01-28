@@ -80,27 +80,25 @@ void typeText(TextRenderer tr, String<128> str, Vector2<int> location, const Ass
 
     tr.position.x = location.x;
     tr.position.y = location.y;
-    LOG("in typetext, location is %d, %d\n", location.x, location.y);
 
     int endIndex = 0; // index of str to print to
     int count = 0;
-    while (tempStr.compare(str)) {
-        LOG("Count: %d\n", count);
+    while (tempStr.size() < str.size()) {
         tr.position.x = location.x;
-        // magic numbers galore
         if (count % textUpdateDelay == 0) {
-            playSfx(sfx);
-
+            LOG("Writing '%s'\n", tempStr.c_str());
             endIndex += charRate;
             for (int i = 0; i < endIndex; i++) {
                 tempStr[i] = str[i];
             }
+            tempStr[endIndex] = '\0';
+            tr.drawText(tempStr.c_str());
+            System::paint();
+
+            playSfx(sfx);
         }
-        tr.drawText(tempStr.c_str());
         count++;
-        System::paint();
     }
-    LOG("Done typing");
 }
 
 
@@ -189,6 +187,7 @@ void main()
     myStr << "This is a test!";
     LOG("%s\n", myStr.c_str());
     typeText(text, myStr, vec(1, 2), Beep, 2, 1);
+    LOG("Finished typing");
 
     // We're entirely event-driven. Everything is
     // updated by SensorListener's event callbacks.

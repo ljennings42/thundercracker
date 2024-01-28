@@ -5,6 +5,7 @@
 #include <sifteo.h>
 #include "assets.gen.h"
 #include "loader.h"
+#include "textsfx.h"
 #define CAULDRON_ID 0
 using namespace Sifteo;
 
