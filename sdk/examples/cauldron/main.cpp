@@ -608,8 +608,8 @@ void main()
     bool debug = false;
 
     if (!debug) {
-        showText();
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+        showText();
         vid[CAULDRON_ID].initMode(BG0_BG1);
         vid[CAULDRON_ID].attach(CAULDRON_ID);
     }
