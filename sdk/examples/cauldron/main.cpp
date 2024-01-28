@@ -109,6 +109,8 @@ public:
     ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
     Potion potMixture;
 
+    bool isIntroTextDone = false;
+
     void install()
     {
         Events::cubeRefresh.set(&CauldronGame::onRefresh, this);
@@ -232,6 +234,13 @@ public:
         }
     }
 
+    void forceDraw(unsigned id) {
+        if (id > CAULDRON_ID) {
+            vid[id].bg0.image(vec(0,0), FloorBg, 0);
+            drawSprites(id);
+        }
+    }
+
 private:
     void onConnect(unsigned id)
     {
@@ -257,10 +266,7 @@ private:
         onAccelChange(cube);
         onTouchOrRelease(cube);
 
-        if (id > CAULDRON_ID) {
-            vid[id].bg0.image(vec(0,0), FloorBg, 0);
-            drawSprites(id);
-        }
+        forceDraw(cube);
     }
 
     template <unsigned tCapacity>
@@ -526,9 +532,12 @@ private:
          * example) the system can't do the repaint all on its own.
          */
 
-        if (cube == CAULDRON_ID)
+        if (!isIntroTextDone) {
             LOG("Refresh event on cube %d\n", cube);
-            initDrawing(&vid[CAULDRON_ID]);
+            solidBg(&vid[cube], cube);
+            System::paint();
+            initLetterbox(&vid[cube]);
+        }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
@@ -610,18 +619,28 @@ private:
 };
 
 void showText() {
-    TextRenderer tr(vid[CAULDRON_ID].fb128);
-    initDrawing(&vid[CAULDRON_ID]);
+    TextRenderer trs[CUBE_ALLOCATION];
+    Colormap *cms[CUBE_ALLOCATION];
 
-    tr.fb.fill(0);
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        trs[i].fb = &vid[i].fb128;
+        cms[i] = &vid[i].colormap;
+        solidBg(&vid[i], i);
+    }
+    System::paint();
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        initLetterbox(&vid[i]);
+        trs[i].fb->fill(0);
+    }
+
     const char *lines[] = {
             "A patron enters your bar.",
             "He wants a love potion!",
             "But it's your first day",
             "on the job..."
     };
-    typeLines(lines, 4, tr, vec(0, 2), Beep, 10, 1, true);
-    fadeOut(&vid[CAULDRON_ID].colormap, 4, 100);
+    typeLines(lines, 4, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
+    fadeOut(cms, CUBE_ALLOCATION, 4, 100);
     LOG("Finished typing");
 }
 
@@ -636,10 +655,15 @@ void main()
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
         showText();
-        vid[CAULDRON_ID].initMode(BG0_SPR_BG1);
-        vid[CAULDRON_ID].attach(CAULDRON_ID);
+        game.isIntroTextDone = true;
     }
 
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        vid[i].initMode(BG0_SPR_BG1);
+        vid[i].attach(i);
+        motion[i].attach(i);
+        game.forceDraw(i);
+    }
 
     TimeStep ts;
     while (1) {
