@@ -110,7 +110,7 @@ public:
     Ingredient potIngredients[CUBE_ALLOCATION] = {};
     ItemAnimation potItemAnimations[CUBE_ALLOCATION] = {};
     Potion potMixture;
-
+    bool textMode = false;
     bool isIntroTextDone = false;
 
     void install()
@@ -278,21 +278,20 @@ public:
     }
 
     void forceDraw(unsigned id) {
-        if (id == CAULDRON_ID) {
-            vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, 0);
-        }
-        else if (id > CAULDRON_ID) {
+        if (id > CAULDRON_ID) {
             vid[id].bg0.image(vec(0,0), FloorBg, 0);
-
+            drawSprites(id);
         }
-        drawSprites(id);
     }
 
-    void showText(const char* lines[], unsigned numLines) {
+    void showText(const char* lines[], unsigned numLines, bool fade) {
         TextRenderer trs[CUBE_ALLOCATION];
         Colormap *cms[CUBE_ALLOCATION];
 
         for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            CubeID cube(i);
+            vid[cube].initMode(BG0);
+            vid[cube].attach(cube);
             trs[i].fb = &vid[i].fb128;
             cms[i] = &vid[i].colormap;
             solidBg(&vid[i], i);
@@ -303,14 +302,21 @@ public:
             trs[i].fb->fill(0);
         }
         typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
-        fadeOut(cms, CUBE_ALLOCATION, 4, 100);
         LOG("Finished typing");
 
-        // return video modes back to normal
-        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
-            vid[i].initMode(BG0_SPR_BG1);
-            vid[i].attach(i);
-            forceDraw(i);
+        if (fade) {
+            fadeOut(cms, CUBE_ALLOCATION, 4, 100);
+
+            // return video modes back to normal
+            for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+                vid[i].initMode(BG0_SPR_BG1);
+                vid[i].attach(i);
+                forceDraw(i);
+                textMode = false;
+            }
+        }
+        else {
+            textMode = true;
         }
     }
 
@@ -378,7 +384,7 @@ private:
         } else {
             // LEFT
             {
-                LOG("PLAYER %d LEFT: %d\n", id, players[id].leftItem);
+                // LOG("PLAYER %d LEFT: %d\n", id, players[id].leftItem);
                 if (players[id].leftItem) {
                     vid[id].sprites[0].setImage(ingredientToImage(players[id].leftItem), 0);
                     vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
@@ -578,6 +584,15 @@ private:
             return;
         }
 
+        if (textMode) {
+            // return video modes back to normal
+            for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+                vid[i].initMode(BG0_SPR_BG1);
+                vid[i].attach(i);
+                forceDraw(i);
+            }
+            textMode = false;
+        }
     }
 
     void onAccelChange(unsigned id)
@@ -602,11 +617,12 @@ private:
                     const char *potionLines[] = {
                             "I CRAVE A ",
                             potionToString(gRandom.randint(VITALITY, LAUGHTER)),
-                            "POTION"
+                            "POTION",
+                            "please tap to continue..."
                     };
 
                     clearPotIngredients();
-                    showText(potionLines, 3);
+                    showText(potionLines, 4, false);
                     resetPlayerItems();
                 }
             }
@@ -766,7 +782,7 @@ void main()
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         if (showTextIntro)
-            game.showText(introLines, 4);
+            game.showText(introLines, 4, true);
         game.isIntroTextDone = true;
     }
 
