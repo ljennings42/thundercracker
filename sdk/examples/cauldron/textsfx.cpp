@@ -87,7 +87,7 @@ void typeText(const char *str, TextRenderer tr, Vector2<int> location, const Ass
     int count = 0;
     while (str[endIndex] != '\0') {
         tr.position.x = location.x;
-        if (count == 0 || count % (textUpdateDelay*1000) == 0) {
+        if (count == 0 || count % (textUpdateDelay*100) == 0) {
             LOG("Writing '%s'\n", tempStr.c_str());
             endIndex += charRate;
             for (int i = 0; i < endIndex; i++) {
