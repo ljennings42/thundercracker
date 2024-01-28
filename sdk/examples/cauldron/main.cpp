@@ -156,6 +156,7 @@ public:
         } else {
             (*leftAnimation).frame = 0;
             (*leftAnimation).offset.x = 0;
+            drawPlayer(id);
         }
 
         ItemAnimation* rightAnimation = &players[id].rightAnimation;
@@ -178,6 +179,7 @@ public:
         } else {
             (*rightAnimation).frame = 0;
             (*rightAnimation).offset.x = 0;
+            drawPlayer(id);
         }
 
         if (players[id].mixedItem) {
