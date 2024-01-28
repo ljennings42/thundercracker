@@ -243,9 +243,39 @@ public:
     }
 
     void forceDraw(unsigned id) {
-        if (id > CAULDRON_ID) {
+        if (id == CAULDRON_ID) {
+            vid[CAULDRON_ID].bg0.image(vec(0, 0), Cauldron, 0);
+        }
+        else if (id > CAULDRON_ID) {
             vid[id].bg0.image(vec(0,0), FloorBg, 0);
-            drawSprites(id);
+
+        }
+        drawSprites(id);
+    }
+
+    void showText(const char* lines[], unsigned numLines) {
+        TextRenderer trs[CUBE_ALLOCATION];
+        Colormap *cms[CUBE_ALLOCATION];
+
+        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            trs[i].fb = &vid[i].fb128;
+            cms[i] = &vid[i].colormap;
+            solidBg(&vid[i], i);
+        }
+        System::paint();
+        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            initLetterbox(&vid[i]);
+            trs[i].fb->fill(0);
+        }
+        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
+        fadeOut(cms, CUBE_ALLOCATION, 4, 100);
+        LOG("Finished typing");
+
+        // return video modes back to normal
+        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            vid[i].initMode(BG0_SPR_BG1);
+            vid[i].attach(i);
+            forceDraw(i);
         }
     }
 
@@ -502,6 +532,7 @@ private:
             // odd number of "touches" means this is on a press so exit early
             return;
         }
+
     }
 
     void onAccelChange(unsigned id)
@@ -523,7 +554,15 @@ private:
                     performMixIngredients();
                 } else if (tilt.z == -1) {
                     // empty cauldron
+                    const char *potionLines[] = {
+                            "I CRAVE A ",
+                            potionToString(gRandom.randint(VITALITY, LAUGHTER)),
+                            "POTION"
+                    };
+
                     clearPotIngredients();
+                    showText(potionLines, 3);
+                    resetPlayerItems();
                 }
             }
 
@@ -574,6 +613,16 @@ private:
         return connections >= PLAYER_TOTAL;
     }
 
+    void resetPlayerItems() {
+        for (int id = 1; id < PLAYER_TOTAL; id++) {
+            players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
+            players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
+            players[id].mixedItem = INGREDIENT_NONE;
+            drawSprites(id);
+            // LOG("Clearing igredients for Player: %d\n", id);
+        }
+    }
+
 
     void onNeighborAdd(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
@@ -614,15 +663,7 @@ private:
         else if (isConnectedNeighorhood()) {
             // Players want new items
             LOG("NEIGHBORHOOD IS FULLY CONNECTED\n");
-
-            // give players new random items
-            for (int id = 1; id < PLAYER_TOTAL; id++) {
-                players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
-                players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
-                players[id].mixedItem = INGREDIENT_NONE;
-                drawSprites(id);
-                // LOG("Clearing igredients for Player: %d\n", id);
-            }
+            resetPlayerItems();
         }
         else {
             // players initiate a trade
@@ -661,53 +702,27 @@ private:
     }
 };
 
-void showText() {
-    TextRenderer trs[CUBE_ALLOCATION];
-    Colormap *cms[CUBE_ALLOCATION];
-
-    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
-        trs[i].fb = &vid[i].fb128;
-        cms[i] = &vid[i].colormap;
-        solidBg(&vid[i], i);
-    }
-    System::paint();
-    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
-        initLetterbox(&vid[i]);
-        trs[i].fb->fill(0);
-    }
-
-    const char *lines[] = {
-            "A patron enters your bar.",
-            "He wants a love potion!",
-            "But it's your first day",
-            "on the job..."
-    };
-    typeLines(lines, 4, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
-    fadeOut(cms, CUBE_ALLOCATION, 4, 100);
-    LOG("Finished typing");
-}
-
 void main()
 {
     static CauldronGame game;
     game.install();
 
+    const char *introLines[] = {
+            "A patron enters your bar.",
+            "He wants a love potion!",
+            "But it's your first day",
+            "on the job..."
+    };
+
     // Toggle this for debug or graphic mode for the cauldron cube
     bool debug = false;
-    bool showTextIntro = false;
+    bool showTextIntro = true;
 
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         if (showTextIntro)
-            showText();
+            game.showText(introLines, 4);
         game.isIntroTextDone = true;
-    }
-
-    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
-        vid[i].initMode(BG0_SPR_BG1);
-        vid[i].attach(i);
-        motion[i].attach(i);
-        game.forceDraw(i);
     }
 
     TimeStep ts;
