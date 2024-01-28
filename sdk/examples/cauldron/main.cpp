@@ -544,28 +544,34 @@ private:
             unsigned playerID = firstID == CAULDRON_ID ? secondID : firstID;
             unsigned playerSide = firstID == CAULDRON_ID ? secondSide : firstSide;
             unsigned cauldronSide = firstID == CAULDRON_ID ? firstSide : secondSide;
+            bool shouldAnimateItemOnCauldron = false;
 
             if (playerSide == LEFT && players[playerID].leftItem) {
                 // pour left item into cauldron
                 potIngredients[playerID] = players[playerID].leftItem;
                 players[playerID].leftItem = INGREDIENT_NONE;
                 players[playerID].leftAnimation.state = ANIMATE_ITEM_AWAY;
+                shouldAnimateItemOnCauldron = true;
             } else if (playerSide == RIGHT && players[playerID].rightItem) {
                 // pour right item into cauldron
                 potIngredients[playerID] = players[playerID].rightItem;
                 players[playerID].rightItem = INGREDIENT_NONE;
                 players[playerID].rightAnimation.state = ANIMATE_ITEM_AWAY;
+                shouldAnimateItemOnCauldron = true;
             } else if (players[playerID].mixedItem) {
                 // pour mixed item into cauldron
                 potIngredients[playerID] = players[playerID].mixedItem;
                 players[playerID].mixedItem = INGREDIENT_NONE;
                 players[playerID].mixedAnimation.state = ANIMATE_ITEM_AWAY;
                 players[playerID].mixedAnimation.animateDirection = playerSide;
+                shouldAnimateItemOnCauldron = true;
             }
 
-            potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
-            potItemAnimations[playerID].animateDirection = cauldronSide;
-            vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
+            if (shouldAnimateItemOnCauldron) {
+                potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
+                potItemAnimations[playerID].animateDirection = cauldronSide;
+                vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
+            }
         } else {
             // players initiate a trade
 
