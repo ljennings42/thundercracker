@@ -777,14 +777,14 @@ const char *tutLines1[] = {
         "Shake to mix ingredients!"
 };
 const char *tutLines2[] = {
-        "Put 3 items in the",
-        "cauldron, shake and",
+        "Put 3 mixed items in ",
+        "the cauldron, shake and",
         "see what you create!"
 };
 const char *tutLines3[] = {
         "Place all cubes next",
         "to each other to get",
-        "new items!"
+        "fresh new items!"
 };
 
 void main()
