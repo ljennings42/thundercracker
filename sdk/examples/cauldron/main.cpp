@@ -146,7 +146,11 @@ public:
 
     void loadPotionSprite() {
         CubeID cube(CAULDRON_ID);
-        vid[cube].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
+        BG1Mask mask;
+        mask.fill(vec(6,1), vec(3, 4));
+        mask.fill(vec(3,5), vec(10, 9));
+        mask.fill(vec(0,14), vec(16, 2));
+        vid[cube].bg1.setMask(mask);
         switch(potMixture) {
             case VITALITY :
                 vid[cube].bg1.image(vec(0,0), PotionVitality, 0);
@@ -170,7 +174,7 @@ public:
             case NEUTRAL:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
-            default :
+            default:
                 vid[cube].bg1.eraseMask();
                 break;
         }
@@ -657,10 +661,12 @@ void main()
 
     // Toggle this for debug or graphic mode for the cauldron cube
     bool debug = false;
+    bool showTextIntro = false;
 
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
-        showText();
+        if (showTextIntro)
+            showText();
         game.isIntroTextDone = true;
     }
 
