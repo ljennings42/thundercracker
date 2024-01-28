@@ -18,6 +18,11 @@ static VideoBuffer vid[CUBE_ALLOCATION];
 static TiltShakeRecognizer motion[CUBE_ALLOCATION];
 static MyLoader cauldronLoader(cauldronCubeSte, MainSlot, vid);
 
+static const Float2 ITEM_CENTER = {64, 64};
+static const Float2 LEFT_ITEM_CENTER = {32, 64};
+static const Float2 RIGHT_ITEM_CENTER = {96, 64};
+static const Float2 CENTER_ITEM_CENTER = {64, 64};
+
 Random gRandom;
 
 static Metadata M = Metadata()
@@ -58,6 +63,18 @@ public:
         NEUTRAL,
     };
 
+    enum AnimateItemState {
+        ANIMATE_ITEM_NEUTRAL = 0,
+        ANIMATE_ITEM_AWAY,
+        ANIMATE_ITEM_NEAR,
+    };
+
+    struct ItemAnimation {
+        AnimateItemState state;
+        unsigned frame;
+        Float2 offset;
+    };
+
     struct Player {
         unsigned touch;
 
@@ -65,6 +82,10 @@ public:
         Ingredient rightItem;
 
         Ingredient mixedItem;
+
+        ItemAnimation leftAnimation;
+        ItemAnimation rightAnimation;
+        ItemAnimation mixedAnimation;
     } players[CUBE_ALLOCATION];
 
     Ingredient pot_ingredients[CUBE_ALLOCATION] = {};
@@ -83,6 +104,59 @@ public:
             onConnect(cube);
     }
 
+    void animate(unsigned id, TimeDelta timeStep) {
+        ItemAnimation* leftAnimation = &players[id].leftAnimation;
+        if ((*leftAnimation).state == ANIMATE_ITEM_AWAY) {
+            (*leftAnimation).frame++;
+            (*leftAnimation).offset.x -= 64 * (float)timeStep;
+
+            if ((*leftAnimation).offset.x <= -64) {
+                // TODO ensure item changed
+                (*leftAnimation).state = ANIMATE_ITEM_NEAR;
+                drawPlayer(id);
+            }
+        } else if ((*leftAnimation).state == ANIMATE_ITEM_NEAR) {
+            (*leftAnimation).frame++;
+            (*leftAnimation).offset.x += 64 * (float)timeStep;
+
+            if ((*leftAnimation).offset.x >= 0) {
+                (*leftAnimation).state = ANIMATE_ITEM_NEUTRAL;
+            }
+        } else {
+            (*leftAnimation).frame = 0;
+            (*leftAnimation).offset.x = 0;
+        }
+
+        ItemAnimation* rightAnimation = &players[id].rightAnimation;
+        if ((*rightAnimation).state == ANIMATE_ITEM_AWAY) {
+            (*rightAnimation).frame++;
+            (*rightAnimation).offset.x += 64 * (float)timeStep;
+
+            if ((*rightAnimation).offset.x >= 64) {
+                // TODO ensure item changed
+                (*rightAnimation).state = ANIMATE_ITEM_NEAR;
+                drawPlayer(id);
+            }
+        } else if ((*rightAnimation).state == ANIMATE_ITEM_NEAR) {
+            (*rightAnimation).frame++;
+            (*rightAnimation).offset.x -= 64 * (float)timeStep;
+
+            if ((*rightAnimation).offset.x <= 0) {
+                (*rightAnimation).state = ANIMATE_ITEM_NEUTRAL;
+            }
+        } else {
+            (*rightAnimation).frame = 0;
+            (*rightAnimation).offset.x = 0;
+        }
+
+        if (players[id].mixedItem) {
+            vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+        } else {
+            vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
+            vid[id].sprites[1].move(RIGHT_ITEM_CENTER - ITEM_CENTER + players[id].rightAnimation.offset);
+        }
+    }
+
 private:
     void onConnect(unsigned id)
     {
@@ -97,7 +171,7 @@ private:
             players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
 
-        vid[id].initMode(BG0_ROM);
+        vid[id].initMode(BG0_SPR_BG1);
         vid[id].attach(id);
         motion[id].attach(id);
 
@@ -108,6 +182,7 @@ private:
         if (id == 0) {
             // printCauldronDebugIngredients();
         } else {
+            vid[id].bg0.image(vec(0,0), FloorBg, 0);
             drawPlayer(id);
         }
     }
@@ -128,28 +203,18 @@ private:
     }
 
     void drawPlayer(unsigned id) {
-        CubeID cube(id);
-
-        vid[id].initMode(BG0_SPR_BG1);
-        vid[id].attach(cube);
-
-        vid[id].bg0.image(vec(0,0), FloorBg, 0);
-
-        const Float2 center = {64, 64};
-
         if (players[id].mixedItem) {
             LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
             vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
-            Float2 pos = {64, 64};
-            vid[id].sprites[0].move(pos - center);
+            vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+            vid[id].sprites[1].hide();
         } else {
             // LEFT
             {
                 LOG("PLAYER %d LEFT: %d\n", id, players[id].leftItem);
                 if (players[id].leftItem) {
                     vid[id].sprites[0].setImage(ingredientToImage(players[id].leftItem), 0);
-                    Float2 pos = {32, 64};
-                    vid[id].sprites[0].move(pos - center);
+                    vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
                 } else {
                     vid[id].sprites[0].hide();
                 }
@@ -159,8 +224,7 @@ private:
                 LOG("PLAYER %d RIGHT: %d\n", id, players[id].rightItem);
                 if (players[id].rightItem) {
                     vid[id].sprites[1].setImage(ingredientToImage(players[id].rightItem), 0);
-                    Float2 pos = {96, 64};
-                    vid[id].sprites[1].move(pos - center);
+                    vid[id].sprites[1].move(RIGHT_ITEM_CENTER - ITEM_CENTER + players[id].rightAnimation.offset);
                 } else {
                     vid[id].sprites[1].hide();
                 }
@@ -371,35 +435,35 @@ private:
             // players initiate a trade
 
             Ingredient* firstItem;
+            ItemAnimation* firstAnim;
             if (firstSide == LEFT && players[firstID].leftItem) {
                 firstItem = &players[firstID].leftItem;
+                firstAnim = &players[firstID].leftAnimation;
             } else if (firstSide == RIGHT && players[firstID].rightItem) {
                 firstItem = &players[firstID].rightItem;
+                firstAnim = &players[firstID].rightAnimation;
             }
 
             Ingredient* secondItem;
+            ItemAnimation* secondAnim;
             if (secondSide == LEFT && players[secondID].leftItem) {
                 secondItem = &players[secondID].leftItem;
+                secondAnim = &players[secondID].leftAnimation;
             } else if (secondSide == RIGHT && players[secondID].rightItem) {
                 secondItem = &players[secondID].rightItem;
+                secondAnim = &players[secondID].rightAnimation;
             }
 
             if (firstItem && secondItem && *firstItem && *secondItem) {
                 // both players offer an item, do the trade
 
-                // TODO animation?!
+                (*firstAnim).state = ANIMATE_ITEM_AWAY;
+                (*secondAnim).state = ANIMATE_ITEM_AWAY;
 
                 Ingredient tempItem = *firstItem;
                 *firstItem = *secondItem;
                 *secondItem = tempItem;
             }
-        }
-
-        if (firstID > 0) {
-            drawPlayer(firstID);
-        }
-        if (secondID > 0) {
-            drawPlayer(secondID);
         }
     }
 };
@@ -413,9 +477,15 @@ void main()
     vid[CAULDRON_ID].initMode(BG0);
     vid[CAULDRON_ID].attach(CAULDRON_ID);
 
+    TimeStep ts;
     while (1) {
         unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
         vid[CAULDRON_ID].bg0.image(vec(0,0), Cauldron, frame);
+
+        for (unsigned i = 0; i < arraysize(game.players); i++)
+            game.animate(i, ts.delta());
+
         System::paint();
+        ts.next();
     }
 }
