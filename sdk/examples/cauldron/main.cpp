@@ -4,10 +4,24 @@
 
 #include <sifteo.h>
 #include "assets.gen.h"
-
-#define INVENTORY_SIZE 3
-
+#include "loader.h"
+#define CAULDRON_ID 0
 using namespace Sifteo;
+
+static const CubeSet cauldronCubeSte(CAULDRON_ID, CAULDRON_ID + 1);
+static AssetSlot MainSlot = AssetSlot::allocate()
+        .bootstrap(BootstrapGroup);
+
+static AssetSlot AnimationSlot = AssetSlot::allocate();
+
+static VideoBuffer vid[CUBE_ALLOCATION];
+static TiltShakeRecognizer motion[CUBE_ALLOCATION];
+static MyLoader cauldronLoader(cauldronCubeSte, MainSlot, vid);
+
+static const Float2 ITEM_CENTER = {64, 64};
+static const Float2 LEFT_ITEM_CENTER = {32, 64};
+static const Float2 RIGHT_ITEM_CENTER = {96, 64};
+static const Float2 CENTER_ITEM_CENTER = {64, 64};
 
 Random gRandom;
 
@@ -17,24 +31,21 @@ static Metadata M = Metadata()
     .icon(Icon)
     .cubeRange(0, CUBE_ALLOCATION);
 
-static VideoBuffer vid[CUBE_ALLOCATION];
-static TiltShakeRecognizer motion[CUBE_ALLOCATION];
-
 class CauldronGame {
 public:
     enum Ingredient {
-        HEART_ORGAN = 0,
-        DRAGONS_BREATH,
-        GARNET,
-        ROSE_PETALS,
+        INGREDIENT_NONE = 0,
 
-        LAVENDER,
         HONEY,
+        FROG_LEGS,
+        NIGHTSHADE,
+        LAVENDER,
+
+        DRAGONS_BREATH,
+        HEART_ORGAN,
         GRIFFON_FEATHER,
         HARPY_BLOOD,
         DREAM_CLOUDS,
-        FROG_LEGS,
-        NIGHTSHADE,
         COFFEE_BEANS,
 
         MAX_INGREDIENTS,
@@ -52,14 +63,32 @@ public:
         NEUTRAL,
     };
 
+    enum AnimateItemState {
+        ANIMATE_ITEM_NEUTRAL = 0,
+        ANIMATE_ITEM_AWAY,
+        ANIMATE_ITEM_NEAR,
+    };
+
+    struct ItemAnimation {
+        AnimateItemState state;
+        unsigned frame;
+        Float2 offset;
+    };
+
     struct Player {
         unsigned touch;
 
-        Ingredient inventory[INVENTORY_SIZE];
-        unsigned selectedInventoryIndex;
+        Ingredient leftItem;
+        Ingredient rightItem;
+
+        Ingredient mixedItem;
+
+        ItemAnimation leftAnimation;
+        ItemAnimation rightAnimation;
+        ItemAnimation mixedAnimation;
     } players[CUBE_ALLOCATION];
 
-    Ingredient pot_ingredients[CUBE_ALLOCATION] = {MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS, MAX_INGREDIENTS};
+    Ingredient pot_ingredients[CUBE_ALLOCATION] = {};
     Potion pot_mixture;
 
     void install()
@@ -75,6 +104,92 @@ public:
             onConnect(cube);
     }
 
+    void loadPotionSprite() {
+        CubeID cube(0);
+        vid[cube].initMode(BG0_BG1);
+        vid[cube].attach(cube);
+        vid[0].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
+        switch(pot_mixture) {
+            case VITALITY :
+                vid[0].bg1.image(vec(0,0), PotionVitality, 0);
+                break;
+            case LOVE :
+                vid[0].bg1.image(vec(0,0), PotionLove, 0);
+                break;
+            case POISONING :
+                vid[0].bg1.image(vec(0,0), PotionPoison, 0);
+                break;
+            case DROWSINESS :
+                vid[0].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                break;
+            case FLIGHT :
+                vid[0].bg1.image(vec(0,0), PotionFlight, 0);
+                break;
+            case HASTE:
+            case NEUTRAL:
+                vid[0].bg1.image(vec(0,0), PotionNeutral, 0);
+                break;
+            default :
+                vid[0].bg1.eraseMask();
+                break;
+        }
+    }
+
+    void animate(unsigned id, TimeDelta timeStep) {
+        ItemAnimation* leftAnimation = &players[id].leftAnimation;
+        if ((*leftAnimation).state == ANIMATE_ITEM_AWAY) {
+            (*leftAnimation).frame++;
+            (*leftAnimation).offset.x -= 64 * (float)timeStep;
+
+            if ((*leftAnimation).offset.x <= -64) {
+                // TODO ensure item changed
+                (*leftAnimation).state = ANIMATE_ITEM_NEAR;
+                drawPlayer(id);
+            }
+        } else if ((*leftAnimation).state == ANIMATE_ITEM_NEAR) {
+            (*leftAnimation).frame++;
+            (*leftAnimation).offset.x += 64 * (float)timeStep;
+
+            if ((*leftAnimation).offset.x >= 0) {
+                (*leftAnimation).state = ANIMATE_ITEM_NEUTRAL;
+            }
+        } else {
+            (*leftAnimation).frame = 0;
+            (*leftAnimation).offset.x = 0;
+            drawPlayer(id);
+        }
+
+        ItemAnimation* rightAnimation = &players[id].rightAnimation;
+        if ((*rightAnimation).state == ANIMATE_ITEM_AWAY) {
+            (*rightAnimation).frame++;
+            (*rightAnimation).offset.x += 64 * (float)timeStep;
+
+            if ((*rightAnimation).offset.x >= 64) {
+                // TODO ensure item changed
+                (*rightAnimation).state = ANIMATE_ITEM_NEAR;
+                drawPlayer(id);
+            }
+        } else if ((*rightAnimation).state == ANIMATE_ITEM_NEAR) {
+            (*rightAnimation).frame++;
+            (*rightAnimation).offset.x -= 64 * (float)timeStep;
+
+            if ((*rightAnimation).offset.x <= 0) {
+                (*rightAnimation).state = ANIMATE_ITEM_NEUTRAL;
+            }
+        } else {
+            (*rightAnimation).frame = 0;
+            (*rightAnimation).offset.x = 0;
+            drawPlayer(id);
+        }
+
+        if (players[id].mixedItem) {
+            vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+        } else {
+            vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
+            vid[id].sprites[1].move(RIGHT_ITEM_CENTER - ITEM_CENTER + players[id].rightAnimation.offset);
+        }
+    }
+
 private:
     void onConnect(unsigned id)
     {
@@ -85,63 +200,87 @@ private:
 
         // init ingredients if player
         if (id > 0) {
-            for (unsigned i = 0; i < INVENTORY_SIZE; i++) {
-                players[id].inventory[i] = gRandom.randint(HEART_ORGAN, ROSE_PETALS);
-            }
-            players[id].selectedInventoryIndex = 0;
+            players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
+            players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
 
-        vid[id].initMode(BG0_ROM);
+        vid[id].initMode(id == 0 ? BG0_BG1 : BG0_SPR_BG1);
         vid[id].attach(id);
         motion[id].attach(id);
 
         // Draw initial state for all sensors
         onAccelChange(cube);
         onTouchOrRelease(cube);
-        drawNeighbors(cube);
 
-        drawCauldronDebugIngredients();
-    }
-
-    void clearScreen(unsigned id) {
-        // CLEAR SCREEN
-        UInt2 topLeft = {0,0};
-        UInt2 size = {16,16};
-        vid[id].bg0rom.fill(topLeft, size, 0);
-    }
-
-    void drawCauldronDebugIngredients() {
-        clearScreen(0);
-
-        String<128> str;
-        str << "CAULDRON\n";
-        for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            LOG("hi %d", i);
-            str << ingredientToString(pot_ingredients[i]) << "\n";
+        if (id == 0) {
+            // printCauldronDebugIngredients();
+        } else {
+            vid[id].bg0.image(vec(0,0), FloorBg, 0);
+            drawPlayer(id);
         }
-        vid[0].bg0rom.text(vec(1, 2), str);
     }
 
-    String<16> ingredientToString(Ingredient ingredient) {
-        String<16> str;
+    template <unsigned tCapacity>
+    String<tCapacity> subString(String<tCapacity> str, unsigned start, unsigned length) {
+        String<tCapacity> result;
+
+        int j = 0;
+        for (int i = start; i < str.size() && i < start + length; i++) {
+            result[j] = str[i];
+            LOG("%c", str[i]);
+            j++;
+        }
+        result[j] = '\0';
+
+        return result;
+    }
+
+    void drawPlayer(unsigned id) {
+        if (players[id].mixedItem) {
+            LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
+            vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
+            vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
+            vid[id].sprites[1].hide();
+        } else {
+            // LEFT
+            {
+                LOG("PLAYER %d LEFT: %d\n", id, players[id].leftItem);
+                if (players[id].leftItem) {
+                    vid[id].sprites[0].setImage(ingredientToImage(players[id].leftItem), 0);
+                    vid[id].sprites[0].move(LEFT_ITEM_CENTER - ITEM_CENTER + players[id].leftAnimation.offset);
+                } else {
+                    vid[id].sprites[0].hide();
+                }
+            }
+            // RIGHT
+            {
+                LOG("PLAYER %d RIGHT: %d\n", id, players[id].rightItem);
+                if (players[id].rightItem) {
+                    vid[id].sprites[1].setImage(ingredientToImage(players[id].rightItem), 0);
+                    vid[id].sprites[1].move(RIGHT_ITEM_CENTER - ITEM_CENTER + players[id].rightAnimation.offset);
+                } else {
+                    vid[id].sprites[1].hide();
+                }
+            }
+        }
+    }
+
+    const PinnedAssetImage& ingredientToImage(Ingredient ingredient) {
         switch (ingredient) {
-            case HEART_ORGAN:       str << "HEART_ORGAN"; break;
-            case DRAGONS_BREATH:    str << "DRAGONS_BREATH"; break;
-            case GARNET:            str << "GARNET"; break;
-            case ROSE_PETALS:       str << "ROSE_PETALS"; break;
+            case HONEY:             return Honey;
+            case FROG_LEGS:         return FrogLegs;
+            case NIGHTSHADE:        return Nightshade;
+            case LAVENDER:          return Lavender;
 
-            case LAVENDER:          str << "LAVENDER"; break;
-            case HONEY:             str << "HONEY"; break;
-            case GRIFFON_FEATHER:   str << "GRIFFON_FEATHER"; break;
-            case HARPY_BLOOD:       str << "HARPY_BLOOD"; break;
-            case DREAM_CLOUDS:      str << "DREAM_CLOUDS"; break;
-            case FROG_LEGS:         str << "FROG_LEGS"; break;
-            case NIGHTSHADE:        str << "NIGHTSHADE"; break;
-            case COFFEE_BEANS:      str << "COFFEE_BEANS"; break;
+            case DRAGONS_BREATH:    return DragonsBreath;
+            case HEART_ORGAN:       return Heart;
+            case GRIFFON_FEATHER:   return GriffonFeather;
+            case HARPY_BLOOD:       return HarpyBlood;
+            case DREAM_CLOUDS:      return DreamClouds;
+            case COFFEE_BEANS:      return CoffeeBeans;
 
-            default:                str << "NONE"; break;
+            default:                return Heart;
         }
-        return str;
     }
 
     String<16> potionToString(Potion potion) {
@@ -160,14 +299,47 @@ private:
         return str;
     }
 
-    void onPlayerClicked(unsigned id) {
-        players[id].selectedInventoryIndex++;
-        players[id].selectedInventoryIndex = players[id].selectedInventoryIndex % INVENTORY_SIZE;
+    bool isItemPairEqual(Ingredient i0, Ingredient i1, Ingredient j0, Ingredient j1) {
+        return (i0 == j0 && i1 == j1) || (i0 == j1 && i1 == j0);
+    }
+
+    void maybeCombinePlayerIngredients(unsigned id) {
+        Ingredient left = players[id].leftItem;
+        Ingredient right = players[id].rightItem;
+        Ingredient result = INGREDIENT_NONE;
+
+        if (isItemPairEqual(left, right, FROG_LEGS, NIGHTSHADE)) {
+            result = DRAGONS_BREATH;
+        }
+        else if (isItemPairEqual(left, right, FROG_LEGS, LAVENDER)) {
+            result = HEART_ORGAN;
+        }
+        else if (isItemPairEqual(left, right, HONEY, LAVENDER)) {
+            result = GRIFFON_FEATHER;
+        }
+        else if (isItemPairEqual(left, right, HONEY, NIGHTSHADE)) {
+            result = HARPY_BLOOD;
+        }
+        else if (isItemPairEqual(left, right, LAVENDER, NIGHTSHADE)) {
+            result = DREAM_CLOUDS;
+        }
+        else if (isItemPairEqual(left, right, HONEY, FROG_LEGS)) {
+            result = COFFEE_BEANS;
+        }
+
+        if (result) {
+            players[id].mixedItem = result;
+            players[id].leftItem = INGREDIENT_NONE;
+            players[id].rightItem = INGREDIENT_NONE;
+        }
+
+        drawPlayer(id);
     }
 
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
             pot_ingredients[i] = MAX_INGREDIENTS;
+            pot_mixture = POTION_NONE;
         }
     }
 
@@ -184,53 +356,46 @@ private:
         if (
                 potContainsIngredient(HEART_ORGAN)
                 && potContainsIngredient(DRAGONS_BREATH)
-                && potContainsIngredient(GARNET)
+                && potContainsIngredient(COFFEE_BEANS)
             ){
             pot_mixture = VITALITY;
         } else if (
                 potContainsIngredient(HEART_ORGAN)
-                && potContainsIngredient(ROSE_PETALS)
-                && potContainsIngredient(LAVENDER)
-                && potContainsIngredient(HONEY)
+                && potContainsIngredient(DREAM_CLOUDS)
+                && potContainsIngredient(COFFEE_BEANS)
                 ){
             pot_mixture = LOVE;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
-                && potContainsIngredient(DREAM_CLOUDS)
                 ){
             pot_mixture = FLIGHT;
         } else if (
-                potContainsIngredient(FROG_LEGS)
-                && potContainsIngredient(NIGHTSHADE)
+                potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
             pot_mixture = POISONING;
         } else if (
-                potContainsIngredient(LAVENDER)
-                && potContainsIngredient(HONEY)
-                && potContainsIngredient(NIGHTSHADE)
+                potContainsIngredient(DREAM_CLOUDS)
+                && potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(HARPY_BLOOD)
                 ){
             pot_mixture = DROWSINESS;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
-                && potContainsIngredient(FROG_LEGS)
                 && potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(DRAGONS_BREATH)
                 ){
             pot_mixture = HASTE;
         } else {
             pot_mixture = NEUTRAL;
         }
+
         LOG("MIX: %i", pot_mixture);
 
         clearPotIngredients();
-
-        clearScreen(0);
-        String<32> str;
-        str << "MIX: " << potionToString(pot_mixture);
-
-        vid[0].bg0rom.text(vec(1,2), str);
     }
     
     void onTouchOrRelease(unsigned id)
@@ -239,24 +404,9 @@ private:
         players[id].touch++;
         LOG("Touch event on cube #%d, state=%d\n", id, cube.isTouching());
 
-        if (id != 0) {
-            // draw ingredient to player cube
-            unsigned inventoryIndex = players[id].selectedInventoryIndex;
-            String<16> str = ingredientToString(players[id].inventory[inventoryIndex]);
-            vid[id].bg0rom.text(vec(1,9), str);
-        }
-
         if (players[id].touch % 2 == 1) {
             // odd number of "touches" means this is on a press so exit early
             return;
-        }
-
-        clearScreen(id);
-
-        // even number of "touches" means this is on a release
-        if (id != 0) {
-            // players
-            onPlayerClicked(id);
         }
     }
 
@@ -265,12 +415,6 @@ private:
         CubeID cube(id);
         auto accel = cube.accel();
 
-        String<64> str;
-        str << "acc: "
-            << Fixed(accel.x, 3)
-            << Fixed(accel.y, 3)
-            << Fixed(accel.z, 3) << "\n";
-
         unsigned changeFlags = motion[id].update();
         if (changeFlags) {
             // Tilt/shake changed
@@ -278,12 +422,6 @@ private:
             LOG("Tilt/shake changed, flags=%08x\n", changeFlags);
 
             auto tilt = motion[id].tilt;
-            str << "tilt:"
-                << Fixed(tilt.x, 3)
-                << Fixed(tilt.y, 3)
-                << Fixed(tilt.z, 3) << "\n";
-
-            str << "shake: " << motion[id].shake;
 
             if (id == 0) {
                 // cauldron
@@ -293,89 +431,97 @@ private:
                 } else if (tilt.z == -1) {
                     // empty cauldron
                     clearPotIngredients();
-                    drawCauldronDebugIngredients();
                 }
             }
-        }
 
-        if (cube != 0) {
-            vid[cube].bg0rom.text(vec(1, 10), str);
+            if (id > 0 && motion[id].shake) {
+                maybeCombinePlayerIngredients(id);
+            }
         }
     }
 
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
-
-        if (firstID > 0) {
-            drawNeighbors(firstID);
-        }
-        if (secondID > 0) {
-            drawNeighbors(secondID);
-        }
     }
 
     void onNeighborAdd(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
 
-        if (firstID == 0) {
-            unsigned inventoryIndex = players[secondID].selectedInventoryIndex;
-            pot_ingredients[secondID] = players[secondID].inventory[inventoryIndex];
+        if (firstID == 0 || secondID == 0) { // one of the cubes is the cauldron
+            unsigned playerID = firstID == 0 ? secondID : firstID;
+            unsigned playerSide = firstID == 0 ? secondSide : firstSide;
+
+            if (playerSide == LEFT && players[playerID].leftItem) {
+                // pour left item into cauldron
+                pot_ingredients[playerID] = players[playerID].leftItem;
+                players[playerID].leftItem = INGREDIENT_NONE;
+            } else if (playerSide == RIGHT && players[playerID].rightItem) {
+                // pour right item into cauldron
+                pot_ingredients[playerID] = players[playerID].rightItem;
+                players[playerID].rightItem = INGREDIENT_NONE;
+            } else if (players[playerID].mixedItem) {
+                // pour mixed item into cauldron
+                pot_ingredients[playerID] = players[playerID].mixedItem;
+                players[playerID].mixedItem = INGREDIENT_NONE;
+            }
+        } else {
+            // players initiate a trade
+
+            Ingredient* firstItem;
+            ItemAnimation* firstAnim;
+            if (firstSide == LEFT && players[firstID].leftItem) {
+                firstItem = &players[firstID].leftItem;
+                firstAnim = &players[firstID].leftAnimation;
+            } else if (firstSide == RIGHT && players[firstID].rightItem) {
+                firstItem = &players[firstID].rightItem;
+                firstAnim = &players[firstID].rightAnimation;
+            }
+
+            Ingredient* secondItem;
+            ItemAnimation* secondAnim;
+            if (secondSide == LEFT && players[secondID].leftItem) {
+                secondItem = &players[secondID].leftItem;
+                secondAnim = &players[secondID].leftAnimation;
+            } else if (secondSide == RIGHT && players[secondID].rightItem) {
+                secondItem = &players[secondID].rightItem;
+                secondAnim = &players[secondID].rightAnimation;
+            }
+
+            if (firstItem && secondItem && *firstItem && *secondItem) {
+                // both players offer an item, do the trade
+
+                (*firstAnim).state = ANIMATE_ITEM_AWAY;
+                (*secondAnim).state = ANIMATE_ITEM_AWAY;
+
+                Ingredient tempItem = *firstItem;
+                *firstItem = *secondItem;
+                *secondItem = tempItem;
+            }
         }
-        if (secondID == 0) {
-            unsigned inventoryIndex = players[firstID].selectedInventoryIndex;
-            pot_ingredients[firstID] = players[firstID].inventory[inventoryIndex];
-        }
-
-        drawCauldronDebugIngredients();
-
-        if (firstID > 0) {
-            drawNeighbors(firstID);
-        }
-        if (secondID > 0) {
-            drawNeighbors(secondID);
-        }
-    }
-
-    void drawNeighbors(CubeID cube)
-    {
-        Neighborhood nb(cube);
-
-        String<64> str;
-        str << "nb "
-            << Hex(nb.neighborAt(TOP), 2) << " "
-            << Hex(nb.neighborAt(LEFT), 2) << " "
-            << Hex(nb.neighborAt(BOTTOM), 2) << " "
-            << Hex(nb.neighborAt(RIGHT), 2) << "\n";
-
-        BG0ROMDrawable &draw = vid[cube].bg0rom;
-        draw.text(vec(1,6), str);
-
-        drawSideIndicator(draw, nb, vec( 1,  0), vec(14,  1), TOP);
-        drawSideIndicator(draw, nb, vec( 0,  1), vec( 1, 14), LEFT);
-        drawSideIndicator(draw, nb, vec( 1, 15), vec(14,  1), BOTTOM);
-        drawSideIndicator(draw, nb, vec(15,  1), vec( 1, 14), RIGHT);
-    }
-
-    static void drawSideIndicator(BG0ROMDrawable &draw, Neighborhood &nb,
-        Int2 topLeft, Int2 size, Side s)
-    {
-        unsigned nbColor = draw.ORANGE;
-        draw.fill(topLeft, size,
-            nbColor | (nb.hasNeighborAt(s) ? draw.SOLID_FG : draw.SOLID_BG));
     }
 };
-
 
 void main()
 {
     static CauldronGame game;
-
     game.install();
 
-    // We're entirely event-driven. Everything is
-    // updated by SensorListener's event callbacks.
-    while (1)
+    cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+    vid[CAULDRON_ID].initMode(BG0_BG1);
+    vid[CAULDRON_ID].attach(CAULDRON_ID);
+
+    TimeStep ts;
+    while (1) {
+        unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
+        vid[CAULDRON_ID].bg0.image(vec(0,0), Cauldron, frame);
+        game.loadPotionSprite();
+
+        for (unsigned i = 0; i < arraysize(game.players); i++)
+            game.animate(i, ts.delta());
+
         System::paint();
+        ts.next();
+    }
 }
