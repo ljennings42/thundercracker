@@ -288,7 +288,7 @@ public:
         }
     }
 
-    void showText(const char* lines[], unsigned numLines, bool fade) {
+    void showText(const char* lines[], unsigned numLines, bool fade, int charRate=1, unsigned hold=100) {
         TextRenderer trs[CUBE_ALLOCATION];
         Colormap *cms[CUBE_ALLOCATION];
 
@@ -298,6 +298,7 @@ public:
             vid[cube].attach(cube);
             trs[i].fb = &vid[i].fb128;
             cms[i] = &vid[i].colormap;
+            (*cms[i])[1] = makeColor(255); // reset to white
             solidBg(&vid[i], i);
         }
         System::paint();
@@ -305,11 +306,11 @@ public:
             initLetterbox(&vid[i]);
             trs[i].fb->fill(0);
         }
-        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
+        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, charRate, true);
         LOG("Finished typing");
 
         if (fade) {
-            fadeOut(cms, CUBE_ALLOCATION, 4, 100);
+            fadeOut(cms, CUBE_ALLOCATION, 4, hold);
 
             // return video modes back to normal
             for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
@@ -320,6 +321,7 @@ public:
             }
         }
         else {
+            for (unsigned i=0; i < hold; i++) System::paint(); // pause to read text without fade
             textMode = true;
         }
     }
@@ -780,17 +782,32 @@ private:
     }
 };
 
+const char *introLines[] = {
+        "A patron enters your bar.",
+        "He wants a love potion!",
+        "But it's your first day",
+        "on the job..."
+};
+const char *tutLines1[] = {
+        "Trade ingredients by",
+        "bumping cubes!",
+        "Shake to mix ingredients!"
+};
+const char *tutLines2[] = {
+        "Put 3 items in the",
+        "cauldron, shake and",
+        "see what you create!"
+};
+const char *tutLines3[] = {
+        "Place all cubes next",
+        "to each other to get",
+        "new items!"
+};
+
 void main()
 {
     static CauldronGame game;
     game.install();
-
-    const char *introLines[] = {
-            "A patron enters the shop.",
-            "He wants a love potion!",
-            "But it's your first day",
-            "on the job..."
-    };
 
     // Toggle this for debug or graphic mode for the cauldron cube
     bool debug = false;
@@ -799,9 +816,21 @@ void main()
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         if (showTextIntro)
-            game.showText(introLines, 4, true);
+            game.showText(introLines, 4, true, 1);
+            game.showText(tutLines1, 3, false, 3);
+            game.showText(tutLines2, 3, false, 3);
+            game.showText(tutLines3, 3, true, 3);
         game.isIntroTextDone = true;
     }
+
+    for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+        vid[i].initMode(BG0_SPR_BG1);
+        vid[i].attach(i);
+        motion[i].attach(i);
+        game.forceDraw(i);
+    }
+
+    //AudioTracker::play(Music)
 
     TimeStep ts;
     while (1) {
