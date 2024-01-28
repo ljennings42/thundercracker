@@ -39,3 +39,5 @@ PotionNeutral = image{"images/Potions/Potion_Neutral.png"}
 PotionPoison = image{"images/Potions/Potion_Poison.png"}
 PotionSpeed = image{"images/Potions/Potion_Speed.png"}
 PotionVitality = image{"images/Potions/Potion_Vitality.png"}
+
+Beep = sound{ "assets/beep.wav" }

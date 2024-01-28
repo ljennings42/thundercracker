@@ -6,6 +6,7 @@
 #include "assets.gen.h"
 #include "loader.h"
 #include "textsfx.h"
+
 #define CAULDRON_ID 0
 using namespace Sifteo;
 
@@ -110,6 +111,7 @@ public:
 
     void install()
     {
+        Events::cubeRefresh.set(&CauldronGame::onRefresh, this);
         Events::neighborAdd.set(&CauldronGame::onNeighborAdd, this);
         Events::neighborRemove.set(&CauldronGame::onNeighborRemove, this);
         Events::cubeAccelChange.set(&CauldronGame::onAccelChange, this);
@@ -125,11 +127,18 @@ public:
         // clearScreen(0);
         vid[CAULDRON_ID].initMode(BG0_ROM);
         String<128> str;
-        str << "CAULDRON\n";
-        for (int i = 1; i < CUBE_ALLOCATION; i++) {
-            str << ingredientToString(potIngredients[i]) << "\n";
+        if (pot_mixture == 0) {
+            str << "CAULDRON\n";
+            for (int i = 1; i < CUBE_ALLOCATION; i++) {
+                str << ingredientToString(potIngredients[i]) << "\n";
+            }
+            vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
         }
-        vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
+        else {
+            str << "POTION: " << potionToString(pot_mixture);
+            vid[CAULDRON_ID].bg0rom.text(vec(1, 2), str);
+        }
+
     }
 
     void loadPotionSprite() {
@@ -408,8 +417,7 @@ private:
 
     void clearPotIngredients() {
         for (int i = 0; i < CUBE_ALLOCATION; i++) {
-            potIngredients[i] = MAX_INGREDIENTS;
-            pot_mixture = POTION_NONE;
+            pot_ingredients[i] = MAX_INGREDIENTS;
         }
     }
 
@@ -509,6 +517,20 @@ private:
         }
     }
 
+    void onRefresh(unsigned cube)
+    {
+        /*
+         * This is an event handler for cases where the system needs
+         * us to fully repaint a cube. Normally this can happen automatically,
+         * but if we're doing any fancy windowing effects (like we do in this
+         * example) the system can't do the repaint all on its own.
+         */
+
+        if (cube == CAULDRON_ID)
+            LOG("Refresh event on cube %d\n", cube);
+            initDrawing(&vid[CAULDRON_ID]);
+    }
+
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
@@ -581,6 +603,22 @@ private:
     }
 };
 
+void showText() {
+    TextRenderer tr(vid[CAULDRON_ID].fb128);
+    initDrawing(&vid[CAULDRON_ID]);
+
+    tr.fb.fill(0);
+    const char *lines[] = {
+            "A patron enters your bar.",
+            "He wants a love potion!",
+            "But it's your first day",
+            "on the job..."
+    };
+    typeLines(lines, 4, tr, vec(0, 2), Beep, 10, 1, true);
+    fadeOut(&vid[CAULDRON_ID].colormap, 4, 100);
+    LOG("Finished typing");
+}
+
 void main()
 {
     static CauldronGame game;
@@ -591,6 +629,7 @@ void main()
 
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+        showText();
         vid[CAULDRON_ID].initMode(BG0_SPR_BG1);
         vid[CAULDRON_ID].attach(CAULDRON_ID);
     }
