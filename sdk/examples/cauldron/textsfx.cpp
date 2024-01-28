@@ -6,18 +6,10 @@
 
 using namespace Sifteo;
 
-void fadeInAndOut(Colormap *cm)
+void fadeOut(Colormap *cm, const unsigned speed, const unsigned hold)
 {
-    const unsigned speed = 4;
-    const unsigned hold = 100;
-
     LOG(("~ FADE ~\n"));
 
-
-    for (unsigned i = 0; i < 0x100; i += speed) {
-        (*cm)[1] = makeColor(i);
-        System::paint();
-    }
 
     for (unsigned i = 0; i < hold; i++)
         System::paint();
@@ -26,6 +18,9 @@ void fadeInAndOut(Colormap *cm)
         (*cm)[1] = makeColor(255 - i);
         System::paint();
     }
+
+    for (unsigned i = 0; i < hold/3; i++)
+        System::paint();
 }
 
 void TextRenderer::drawGlyph(char ch) {
@@ -92,7 +87,7 @@ void typeText(const char *str, TextRenderer tr, Vector2<int> location, const Ass
     int count = 0;
     while (str[endIndex] != '\0') {
         tr.position.x = location.x;
-        if (count % textUpdateDelay == 0) {
+        if (count == 0 || count % (textUpdateDelay*1000) == 0) {
             LOG("Writing '%s'\n", tempStr.c_str());
             endIndex += charRate;
             for (int i = 0; i < endIndex; i++) {
@@ -137,7 +132,7 @@ void initDrawing(VideoBuffer* myVidBuf)
      */
 
     myVidBuf->initMode(SOLID_MODE);
-    myVidBuf->colormap[0] = makeColor(0);
+    myVidBuf->colormap[0].set(0.0f, 0.0f, 0.0f);
     myVidBuf->attach(0);
 
     System::paint();
@@ -150,5 +145,5 @@ void initDrawing(VideoBuffer* myVidBuf)
      */
 
     myVidBuf->initMode(FB128, 40, 48);
-    myVidBuf->colormap[0] = makeColor(0);
+    myVidBuf->colormap[1] = makeColor((unsigned)255);
 }

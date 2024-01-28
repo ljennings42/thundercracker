@@ -594,8 +594,8 @@ void showText() {
             "But it's your first day",
             "on the job..."
     };
-    typeLines(lines, 4, tr, vec(0, 2), Beep, 3, 1, true);
-    fadeInAndOut(&vid[CAULDRON_ID].colormap);
+    typeLines(lines, 4, tr, vec(0, 2), Beep, 10, 1, true);
+    fadeOut(&vid[CAULDRON_ID].colormap, 4, 100);
     LOG("Finished typing");
 }
 
@@ -608,8 +608,8 @@ void main()
     bool debug = false;
 
     if (!debug) {
-        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
         showText();
+        cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
         vid[CAULDRON_ID].initMode(BG0_BG1);
         vid[CAULDRON_ID].attach(CAULDRON_ID);
     }
