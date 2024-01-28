@@ -85,31 +85,31 @@ public:
 
     void loadPotionSprite() {
         CubeID cube(0);
-        vid[cube].initMode(BG0_SPR_BG1);
+        vid[cube].initMode(BG0_BG1);
         vid[cube].attach(cube);
-        vid[0].sprites[0].setImage(PotionVitality, 0);
+        vid[0].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
         switch(pot_mixture) {
             case VITALITY :
-                vid[0].sprites[0].setImage(PotionVitality, 0);
+                vid[0].bg1.image(vec(0,0), PotionVitality, 0);
                 break;
             case LOVE :
-                vid[0].sprites[0].setImage(PotionLove, 0);
+                vid[0].bg1.image(vec(0,0), PotionLove, 0);
                 break;
             case POISONING :
-                vid[0].sprites[0].setImage(PotionPoison, 0);
+                vid[0].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
             case DROWSINESS :
-                vid[0].sprites[0].setImage(PotionDrowsiness, 0);
+                vid[0].bg1.image(vec(0,0), PotionDrowsiness, 0);
                 break;
             case FLIGHT :
-                vid[0].sprites[0].setImage(PotionFlight, 0);
+                vid[0].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
             case NEUTRAL:
-                vid[0].sprites[0].setImage(PotionNeutral, 0);
+                vid[0].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
             default :
-                vid[0].sprites[0].hide();
+                vid[0].bg1.eraseMask();
                 break;
         }
     }
@@ -128,7 +128,7 @@ private:
             players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
         }
 
-        vid[id].initMode(BG0_ROM);
+        vid[id].initMode(BG0_BG1);
         vid[id].attach(id);
         motion[id].attach(id);
 
@@ -437,26 +437,13 @@ private:
     }
 };
 
-void loadSprite() {
-    unsigned id = 0;
-    vid[id].initMode(BG0_SPR_BG1);
-    vid[id].attach(id);
-
-    // draw background
-    vid[id].bg0.image(vec(0,0), LoadingBg);
-
-    // draw potion in foreground
-    // vid[id].bg1.image(vec(0,0), Potion);
-    vid[id].sprites[0].setImage(PotionVitality, 0);
-}
-
 void main()
 {
     static CauldronGame game;
     game.install();
 
     cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
-    vid[CAULDRON_ID].initMode(BG0);
+    vid[CAULDRON_ID].initMode(BG0_BG1);
     vid[CAULDRON_ID].attach(CAULDRON_ID);
 
     while (1) {
