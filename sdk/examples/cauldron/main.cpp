@@ -26,6 +26,7 @@ static const Float2 ITEM_CENTER = {64, 64};
 static const Float2 LEFT_ITEM_CENTER = {32, 64};
 static const Float2 RIGHT_ITEM_CENTER = {96, 64};
 static const Float2 CENTER_ITEM_CENTER = {64, 64};
+static const unsigned PLAYER_TOTAL = 6;
 
 Random gRandom;
 
@@ -555,6 +556,26 @@ private:
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
     }
 
+    bool isConnectedNeighorhood() {
+        unsigned connections = 0;
+        // to-do: read in PLAYER_TOTAL from command line arg
+        for (int id = 1; id < PLAYER_TOTAL; id++) {
+            CubeID cube(id);
+            Neighborhood nb(cube);
+            int total = 0;
+            if (nb.hasNeighborAt(TOP)) total++;
+            if (nb.hasNeighborAt(LEFT)) total++;
+            if (nb.hasNeighborAt(BOTTOM)) total++;
+            if (nb.hasNeighborAt(RIGHT)) total++;
+            // LOG("Connections for Player: %d is %d\n", id, total);
+            connections += total;
+            // LOG("Total Connections: %d\n", connections);
+            if (total == 0) return false;
+        }
+        return connections >= PLAYER_TOTAL;
+    }
+
+
     void onNeighborAdd(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Add: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
@@ -585,13 +606,26 @@ private:
                 players[playerID].mixedAnimation.animateDirection = playerSide;
                 shouldAnimateItemOnCauldron = true;
             }
-
             if (shouldAnimateItemOnCauldron) {
                 potItemAnimations[playerID].state = ANIMATE_ITEM_NEAR;
                 potItemAnimations[playerID].animateDirection = cauldronSide;
                 vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potIngredients[playerID]), 0);
             }
-        } else {
+        }
+        else if (isConnectedNeighorhood()) {
+            // Players want new items
+            LOG("NEIGHBORHOOD IS FULLY CONNECTED\n");
+
+            // give players new random items
+            for (int id = 1; id < PLAYER_TOTAL; id++) {
+                players[id].leftItem = gRandom.randint(HONEY, LAVENDER);
+                players[id].rightItem = gRandom.randint(HONEY, LAVENDER);
+                players[id].mixedItem = INGREDIENT_NONE;
+                drawSprites(id);
+                // LOG("Clearing igredients for Player: %d\n", id);
+            }
+        }
+        else {
             // players initiate a trade
 
             Ingredient* firstItem;
