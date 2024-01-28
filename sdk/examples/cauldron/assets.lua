@@ -6,6 +6,7 @@ Icon = image{"images/icon.png"}
 
 BootstrapGroup = group{ quality=8 }
 LoadingBG = image{"images/TitleScreen_BG.png"}
+PlayerLoadingBG = image{"images/UI/LoadingScreen.png"}
 FloorBg = image{"images/Floor_BG_v2.png"}
 Honey = image{"images/Ingredients/Honey.png", pinned=true}
 FrogLegs = image{"images/Ingredients/FrogLegs.png", pinned=true}
@@ -40,5 +41,10 @@ PotionPoison = image{"images/Potions/Potion_Poison_wtxt.png"}
 PotionHaste = image{"images/Potions/Potion_Haste_wtxt.png"}
 PotionVitality = image{"images/Potions/Potion_Vitality_wtxt.png"}
 PotionLaughter = image{"images/Potions/Potion_Laughter_wtxt.png"}
+CauldronUIBar00 = image{"images/UI/ProgressBar_00.png"}
+CauldronUIBar25 = image{"images/UI/ProgressBar_25.png"}
+CauldronUIBar50 = image{"images/UI/ProgressBar_50.png"}
+CauldronUIBar75 = image{"images/UI/ProgressBar_75.png"}
+CauldronUIBar100 = image{"images/UI/ProgressBar_100.png"}
 
 Beep = sound{ "assets/beep.wav" }

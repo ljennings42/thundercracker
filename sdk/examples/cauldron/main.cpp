@@ -145,13 +145,30 @@ public:
 
     }
 
+    Potion _prevPotMixture = (Potion)-1;
     void loadPotionSprite() {
         CubeID cube(CAULDRON_ID);
-        BG1Mask mask;
-        mask.fill(vec(6,1), vec(3, 4));
-        mask.fill(vec(3,5), vec(10, 9));
-        mask.fill(vec(0,14), vec(16, 2));
-        vid[cube].bg1.setMask(mask);
+
+        if (_prevPotMixture != potMixture) {
+            _prevPotMixture = potMixture;
+            // pot mixture changed, reset the mask!
+
+            vid[cube].bg1.eraseMask();
+            if (potMixture) {
+                // potion shape
+                BG1Mask mask;
+                mask.fill(vec(6, 1), vec(3, 4)); // top
+                mask.fill(vec(3, 5), vec(10, 9)); // base
+                mask.fill(vec(0, 14), vec(16, 2)); // bottom text
+                vid[cube].bg1.setMask(mask);
+            } else {
+                // ui top right
+                BG1Mask mask;
+                mask.fill(vec(14, 0), vec(2, 6));
+                vid[cube].bg1.setMask(mask);
+            }
+        }
+
         switch(potMixture) {
             case VITALITY :
                 vid[cube].bg1.image(vec(0,0), PotionVitality, 0);
@@ -176,7 +193,24 @@ public:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
             default:
-                vid[cube].bg1.eraseMask();
+                // draw cauldron fill ui if no potion
+                AssetImage progressImages[] = {
+                        CauldronUIBar00,
+                        CauldronUIBar25,
+                        CauldronUIBar50,
+                        CauldronUIBar75,
+                        CauldronUIBar100,
+                };
+                AssetImage barImage;
+
+                unsigned ingredientCount = countPotIngredients();
+                if (ingredientCount > 4) {
+                    barImage = progressImages[4];
+                } else {
+                    barImage = progressImages[ingredientCount];
+                }
+
+                vid[CAULDRON_ID].bg1.image(vec(0, 0), barImage, 0);
                 break;
         }
     }
@@ -219,6 +253,7 @@ public:
         } else {
             animation->time = 0;
             animation->offset = ZERO_VECTOR;
+            drawSprites(id);
         }
     }
 
@@ -454,6 +489,16 @@ private:
         }
 
         drawSprites(id);
+    }
+
+    unsigned countPotIngredients() {
+        unsigned result = 0;
+        for (unsigned i = 0; i < CUBE_ALLOCATION; i++) {
+            if (potIngredients[i]) {
+                result++;
+            }
+        }
+        return result;
     }
 
     void clearPotIngredients() {
