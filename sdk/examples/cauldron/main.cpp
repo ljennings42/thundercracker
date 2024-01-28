@@ -738,7 +738,7 @@ void main()
 
     // Toggle this for debug or graphic mode for the cauldron cube
     bool debug = false;
-    bool showTextIntro = false; // nocommit
+    bool showTextIntro = true;
 
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
