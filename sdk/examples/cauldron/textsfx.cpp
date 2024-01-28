@@ -88,8 +88,9 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
 
     int endIndex = 0; // index of str to print to
     int count = 0;
+    int textDrawCount = 0;
+    bool strEnd = false;
     while (str[endIndex] != '\0') {
-
         // reset x position of text for each redraw
         for (unsigned i = 0; i < trsCount; i++) {
             trs[i].position.x = location.x;
@@ -97,7 +98,19 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
 
         if (count == 0 || count % (textUpdateDelay * 100) == 0) {
             LOG("Writing '%s'\n", tempStr.c_str());
-            endIndex += charRate;
+
+            // iterate endIndex by charRate, but watch for the null terminator
+            bool flag = true;
+            int loopCount = 0;
+            while (flag) {
+                endIndex++;
+                if (str[endIndex] == '\0')
+                    flag = false;
+                if (loopCount >= charRate-1)
+                    flag = false;
+                loopCount++;
+            }
+
             for (int i = 0; i < endIndex; i++) {
                 tempStr[i] = str[i];
             }
@@ -111,7 +124,9 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
             }
             System::paint();
 
-            playSfx(sfx);
+            if (textDrawCount % 2 == 0)
+                playSfx(sfx);
+            textDrawCount++;
         }
 
         count++;

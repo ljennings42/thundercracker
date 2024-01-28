@@ -302,7 +302,7 @@ public:
             initLetterbox(&vid[i]);
             trs[i].fb->fill(0);
         }
-        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, 1, true);
+        typeLines(lines, numLines, trs, CUBE_ALLOCATION, vec(0, 2), Beep, 10, charRate, true);
         LOG("Finished typing");
 
         if (fade) {
@@ -317,6 +317,7 @@ public:
             }
         }
         else {
+            //for (unsigned i=0; i < hold; i++) System::paint(); // pause to read text without fade
             textMode = true;
         }
     }
