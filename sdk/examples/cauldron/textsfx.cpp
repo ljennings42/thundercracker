@@ -4,10 +4,28 @@
 
 #include "textsfx.h"
 
-static void playSfx(const AssetAudio& sfx) {
-    static int i=0;
-    AudioChannel(i).play(sfx);
-    i = 1 - i;
+using namespace Sifteo;
+
+void fadeInAndOut(Colormap *cm)
+{
+    const unsigned speed = 4;
+    const unsigned hold = 100;
+
+    LOG(("~ FADE ~\n"));
+
+
+    for (unsigned i = 0; i < 0x100; i += speed) {
+        (*cm)[1] = makeColor(i);
+        System::paint();
+    }
+
+    for (unsigned i = 0; i < hold; i++)
+        System::paint();
+
+    for (unsigned i = 0; i < 0x100; i += speed) {
+        (*cm)[1] = makeColor(255 - i);
+        System::paint();
+    }
 }
 
 void TextRenderer::drawGlyph(char ch) {
@@ -51,13 +69,20 @@ unsigned TextRenderer::measureText(const char *str) {
 void TextRenderer::drawCentered(const char *str) {
     position.x = (LCD_width - measureText(str)) / 2;
     drawText(str);
-    position.y += 8;
 }
+
+void playSfx(const AssetAudio& sfx) {
+    static int i=0;
+    AudioChannel(i).play(sfx);
+    i = 1 - i;
+}
+
 
 // str will print out character by character, limit of 64 chars
 // location is a vector<unsigned> of coords indicating where to place the text
 // charRate is the number of chars to print at a time
-void typeText(TextRenderer tr, String<128> str, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate) {
+void typeText(const char *str, TextRenderer tr, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered) {
+    LOG("Typing out '%s'\n", str);
     String<128> tempStr;
 
     tr.position.x = location.x;
@@ -65,7 +90,7 @@ void typeText(TextRenderer tr, String<128> str, Vector2<int> location, const Ass
 
     int endIndex = 0; // index of str to print to
     int count = 0;
-    while (tempStr.size() < str.size()) {
+    while (str[endIndex] != '\0') {
         tr.position.x = location.x;
         if (count % textUpdateDelay == 0) {
             LOG("Writing '%s'\n", tempStr.c_str());
@@ -74,7 +99,11 @@ void typeText(TextRenderer tr, String<128> str, Vector2<int> location, const Ass
                 tempStr[i] = str[i];
             }
             tempStr[endIndex] = '\0';
-            tr.drawText(tempStr.c_str());
+            if (drawCentered) {
+                tr.drawCentered(tempStr.c_str());
+                tr.position.x = location.x;
+            }
+            else tr.drawText(tempStr.c_str());
             System::paint();
 
             playSfx(sfx);
@@ -83,7 +112,15 @@ void typeText(TextRenderer tr, String<128> str, Vector2<int> location, const Ass
     }
 }
 
-static RGB565 makeColor(uint8_t alpha)
+void typeLines(const char **lines, unsigned numLines, TextRenderer tr, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered) {
+    Vector2<int> loc = location;
+    for (int i = 0; i < numLines; i++) {
+        typeText(lines[i], tr, loc, sfx, textUpdateDelay, charRate, drawCentered);
+        loc.y += 8;
+    }
+}
+
+RGB565 makeColor(uint8_t alpha)
 {
     // Linear interpolation between foreground and background
 
@@ -93,38 +130,15 @@ static RGB565 makeColor(uint8_t alpha)
     return bg.lerp(fg, alpha);
 }
 
-
-static void fadeInAndOut(Colormap &cm)
-{
-    const unsigned speed = 4;
-    const unsigned hold = 100;
-
-    LOG(("~ FADE ~\n"));
-
-
-    for (unsigned i = 0; i < 0x100; i += speed) {
-        cm[1] = makeColor(i);
-        System::paint();
-    }
-
-    for (unsigned i = 0; i < hold; i++)
-        System::paint();
-
-    for (unsigned i = 0; i < 0x100; i += speed) {
-        cm[1] = makeColor(255 - i);
-        System::paint();
-    }
-}
-
-void initDrawing(VideoBuffer myVidBuf)
+void initDrawing(VideoBuffer* myVidBuf)
 {
     /*
      * Init framebuffer, paint a solid background.
      */
 
-    myVidBuf.initMode(SOLID_MODE);
-    myVidBuf.colormap[0] = makeColor(0);
-    myVidBuf.attach(0);
+    myVidBuf->initMode(SOLID_MODE);
+    myVidBuf->colormap[0] = makeColor(0);
+    myVidBuf->attach(0);
 
     System::paint();
 
@@ -135,20 +149,6 @@ void initDrawing(VideoBuffer myVidBuf)
      * initMode() will automatically wait for the above rendering to finish.
      */
 
-    myVidBuf.initMode(FB128, 40, 48);
-    myVidBuf.colormap[0] = makeColor(0);
-}
-
-void onRefresh(void*, unsigned cube, VideoBuffer myVidBuf)
-{
-    /*
-     * This is an event handler for cases where the system needs
-     * us to fully repaint a cube. Normally this can happen automatically,
-     * but if we're doing any fancy windowing effects (like we do in this
-     * example) the system can't do the repaint all on its own.
-     */
-
-    LOG("Refresh event on cube %d\n", cube);
-    if (cube == 0)
-        initDrawing(myVidBuf);
+    myVidBuf->initMode(FB128, 40, 48);
+    myVidBuf->colormap[0] = makeColor(0);
 }

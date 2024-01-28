@@ -6,6 +6,7 @@
 #include "assets.gen.h"
 #include "loader.h"
 #include "textsfx.h"
+
 #define CAULDRON_ID 0
 using namespace Sifteo;
 
@@ -94,6 +95,7 @@ public:
 
     void install()
     {
+        Events::cubeRefresh.set(&CauldronGame::onRefresh, this);
         Events::neighborAdd.set(&CauldronGame::onNeighborAdd, this);
         Events::neighborRemove.set(&CauldronGame::onNeighborRemove, this);
         Events::cubeAccelChange.set(&CauldronGame::onAccelChange, this);
@@ -109,29 +111,29 @@ public:
         CubeID cube(0);
         vid[cube].initMode(BG0_BG1);
         vid[cube].attach(cube);
-        vid[0].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
+        vid[CAULDRON_ID].bg1.setMask(BG1Mask::filled(vec(3,1), vec(10, 14)));
         switch(pot_mixture) {
             case VITALITY :
-                vid[0].bg1.image(vec(0,0), PotionVitality, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionVitality, 0);
                 break;
             case LOVE :
-                vid[0].bg1.image(vec(0,0), PotionLove, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionLove, 0);
                 break;
             case POISONING :
-                vid[0].bg1.image(vec(0,0), PotionPoison, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
             case DROWSINESS :
-                vid[0].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionDrowsiness, 0);
                 break;
             case FLIGHT :
-                vid[0].bg1.image(vec(0,0), PotionFlight, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
             case NEUTRAL:
-                vid[0].bg1.image(vec(0,0), PotionNeutral, 0);
+                vid[CAULDRON_ID].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
             default :
-                vid[0].bg1.eraseMask();
+                vid[CAULDRON_ID].bg1.eraseMask();
                 break;
         }
     }
@@ -441,6 +443,20 @@ private:
         }
     }
 
+    void onRefresh(unsigned cube)
+    {
+        /*
+         * This is an event handler for cases where the system needs
+         * us to fully repaint a cube. Normally this can happen automatically,
+         * but if we're doing any fancy windowing effects (like we do in this
+         * example) the system can't do the repaint all on its own.
+         */
+
+        if (cube == CAULDRON_ID)
+            LOG("Refresh event on cube %d\n", cube);
+            initDrawing(&vid[CAULDRON_ID]);
+    }
+
     void onNeighborRemove(unsigned firstID, unsigned firstSide, unsigned secondID, unsigned secondSide)
     {
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
@@ -504,12 +520,29 @@ private:
     }
 };
 
+void showText() {
+    TextRenderer tr(vid[CAULDRON_ID].fb128);
+    initDrawing(&vid[CAULDRON_ID]);
+
+    tr.fb.fill(0);
+    const char *lines[] = {
+            "A patron enters your bar.",
+            "He wants a love potion!",
+            "But it's your first day",
+            "on the job..."
+    };
+    typeLines(lines, 4, tr, vec(0, 2), Beep, 3, 1, true);
+    fadeInAndOut(&vid[CAULDRON_ID].colormap);
+    LOG("Finished typing");
+}
+
 void main()
 {
     static CauldronGame game;
     game.install();
 
     cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+    showText();
     vid[CAULDRON_ID].initMode(BG0_BG1);
     vid[CAULDRON_ID].attach(CAULDRON_ID);
 
