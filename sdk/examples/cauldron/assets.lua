@@ -6,7 +6,7 @@ Icon = image{"images/icon.png"}
 
 BootstrapGroup = group{ quality=8 }
 LoadingBG = image{"images/TitleScreen_BG.png"}
-FloorBg = image{"images/Floor_BG.png"}
+FloorBg = image{"images/Floor_BG_v2.png"}
 Honey = image{"images/Ingredients/Honey.png", pinned=true}
 FrogLegs = image{"images/Ingredients/FrogLegs.png", pinned=true}
 Nightshade = image{"images/Ingredients/Nightshade.png", pinned=true}
@@ -32,12 +32,13 @@ end
 
 CauldronGroup = group{quality=8}
 Cauldron = image{ frames("images/Cauldron_Frames/Cauldron_1.%04d.png", 59)}
-PotionDrowsiness = image{"images/Potions/Potion_Drowsiness.png"}
-PotionFlight = image{"images/Potions/Potion_Flight.png"}
-PotionLove = image{"images/Potions/Potion_Love.png"}
-PotionNeutral = image{"images/Potions/Potion_Neutral.png"}
-PotionPoison = image{"images/Potions/Potion_Poison.png"}
-PotionSpeed = image{"images/Potions/Potion_Speed.png"}
-PotionVitality = image{"images/Potions/Potion_Vitality.png"}
+PotionSleep = image{"images/Potions/Potion_Sleep_wtxt.png"}
+PotionFlight = image{"images/Potions/Potion_Flight_wtxt.png"}
+PotionLove = image{"images/Potions/Potion_Love_wtxt.png"}
+PotionNeutral = image{"images/Potions/Potion_Neutral_wtxt.png"}
+PotionPoison = image{"images/Potions/Potion_Poison_wtxt.png"}
+PotionHaste = image{"images/Potions/Potion_Haste_wtxt.png"}
+PotionVitality = image{"images/Potions/Potion_Vitality_wtxt.png"}
+PotionLaughter = image{"images/Potions/Potion_Laughter_wtxt.png"}
 
 Beep = sound{ "assets/beep.wav" }

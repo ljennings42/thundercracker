@@ -76,6 +76,7 @@ public:
         POISONING,
         DROWSINESS,
         HASTE,
+        LAUGHTER,
         NEUTRAL,
     };
 
@@ -157,13 +158,15 @@ public:
                 vid[cube].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
             case DROWSINESS :
-                vid[cube].bg1.image(vec(0,0), PotionDrowsiness, 0);
+                vid[cube].bg1.image(vec(0,0), PotionSleep, 0);
                 break;
             case FLIGHT :
                 vid[cube].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
-                vid[cube].bg1.image(vec(0,0), PotionSpeed, 0);
+                vid[cube].bg1.image(vec(0,0), PotionHaste, 0);
+            case LAUGHTER:
+                vid[cube].bg1.image(vec(0,0), PotionLaughter, 0);
             case NEUTRAL:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
@@ -353,6 +356,7 @@ private:
             case POISONING:     str << "POISONING"; break;
             case DROWSINESS:    str << "DROWSINESS"; break;
             case HASTE:         str << "HASTE"; break;
+            case LAUGHTER:      str << "LAUGHTER"; break;
             case NEUTRAL:       str << "NEUTRAL"; break;
 
             default:            str << "ERROR"; break;
@@ -469,6 +473,12 @@ private:
                 && potContainsIngredient(DRAGONS_BREATH)
                 ){
             potMixture = HASTE;
+        } else if (
+                potContainsIngredient(GRIFFON_FEATHER)
+                && potContainsIngredient(COFFEE_BEANS)
+                && potContainsIngredient(HONEY)
+                ){
+            potMixture = LAUGHTER;
         } else {
             potMixture = NEUTRAL;
         }
