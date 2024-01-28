@@ -253,6 +253,7 @@ public:
         } else {
             animation->time = 0;
             animation->offset = ZERO_VECTOR;
+            drawSprites(id);
         }
     }
 
