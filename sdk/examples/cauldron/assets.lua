@@ -23,7 +23,7 @@ CoffeeBeans = image{"images/Ingredients/CoffeeBeans.png", pinned=true}
 function frames(fmt, count)
     t = {}
     for i = 1, count do
-        if (i % 2 == 0)
+        if (i % 4 == 0)
         then
            t[1+#t] = string.format(fmt, i)
         end

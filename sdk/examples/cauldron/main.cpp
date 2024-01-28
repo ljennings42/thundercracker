@@ -5,9 +5,10 @@
 #include <sifteo.h>
 #include "assets.gen.h"
 #include "loader.h"
+#define CAULDRON_ID 0
 using namespace Sifteo;
-static const unsigned numCubes = 3;
-static const CubeSet allCubes(0, numCubes);
+
+static const CubeSet cauldronCubeSte(CAULDRON_ID, CAULDRON_ID + 1);
 static AssetSlot MainSlot = AssetSlot::allocate()
         .bootstrap(BootstrapGroup);
 
@@ -15,7 +16,7 @@ static AssetSlot AnimationSlot = AssetSlot::allocate();
 
 static VideoBuffer vid[CUBE_ALLOCATION];
 static TiltShakeRecognizer motion[CUBE_ALLOCATION];
-static MyLoader loader(allCubes, MainSlot, vid);
+static MyLoader cauldronLoader(cauldronCubeSte, MainSlot, vid);
 
 Random gRandom;
 
@@ -403,21 +404,6 @@ private:
     }
 };
 
-void animation(const AssetImage &image, unsigned id)
-{
-    CubeID cube(id);
-    loader.load(image.assetGroup(), AnimationSlot, cube);
-
-    vid[cube].initMode(BG0);
-    vid[cube].attach(cube);
-
-    while (1) {
-        unsigned frame = SystemTime::now().cycleFrame(2.0, image.numFrames());
-        vid[cube].bg0.image(vec(0,0), image, frame);
-        System::paint();
-    }
-}
-
 void loadImage() {
     unsigned id = 0;
 
@@ -433,8 +419,13 @@ void main()
     static CauldronGame game;
     game.install();
 
+    cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CAULDRON_ID);
+    vid[CAULDRON_ID].initMode(BG0);
+    vid[CAULDRON_ID].attach(CAULDRON_ID);
+
     while (1) {
-        animation(Cauldron, 0);
+        unsigned frame = SystemTime::now().cycleFrame(2.0, Cauldron.numFrames());
+        vid[CAULDRON_ID].bg0.image(vec(0,0), Cauldron, frame);
         System::paint();
     }
 }
