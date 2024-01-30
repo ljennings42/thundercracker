@@ -255,7 +255,6 @@ public:
         } else {
             animation->time = 0;
             animation->offset = ZERO_VECTOR;
-            drawSprites(id);
         }
     }
 
@@ -380,7 +379,7 @@ private:
         }
 
         if (players[id].mixedItem || players[id].mixedAnimation.state != ANIMATE_ITEM_NEUTRAL) {
-            LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
+//            LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
             if (players[id].mixedItem) {
                 vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
                 vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
@@ -730,13 +729,11 @@ private:
                 potItemAnimations[cauldronSide].animateDirection = cauldronSide;
                 vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potAnimatingItems[cauldronSide]), 0);
             }
-        }
-        else if (isConnectedNeighorhood()) {
+        } else if (isConnectedNeighorhood()) {
             // Players want new items
             LOG("NEIGHBORHOOD IS FULLY CONNECTED\n");
             resetPlayerItems();
-        }
-        else {
+        } else {
             // players initiate a trade
 
             Ingredient* firstItem;
@@ -837,7 +834,7 @@ void main()
             }
         }
 
-        for (unsigned i = 0; i < arraysize(game.potItemAnimations); i++)
+        for (unsigned i = 0; i < CUBE_ALLOCATION; i++)
             game.animatePlayerItems(i, ts.delta());
 
 
