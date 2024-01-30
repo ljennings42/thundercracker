@@ -367,7 +367,7 @@ private:
 
     void drawSprites(unsigned id) {
         if (id == CAULDRON_ID) {
-            for (unsigned i = 0; i < 4; i++) {
+            for (unsigned i = 0; i < arraysize(potItemAnimations); i++) {
                 if (potItemAnimations[i].state != ANIMATE_ITEM_NEUTRAL) {
                     vid[CAULDRON_ID].sprites[i].setImage(ingredientToImage(potAnimatingItems[i]), 0);
                 } else {
@@ -379,7 +379,7 @@ private:
         }
 
         if (players[id].mixedItem || players[id].mixedAnimation.state != ANIMATE_ITEM_NEUTRAL) {
-//            LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
+            // LOG("PLAYER %d MIXED_ITEM: %d\n", id, players[id].mixedItem);
             if (players[id].mixedItem) {
                 vid[id].sprites[0].setImage(ingredientToImage(players[id].mixedItem), 0);
                 vid[id].sprites[0].move(CENTER_ITEM_CENTER - ITEM_CENTER + players[id].mixedAnimation.offset);
@@ -727,7 +727,7 @@ private:
                 potAnimatingItems[cauldronSide] = potIngredients[potIngredients.count()-1];
                 potItemAnimations[cauldronSide].state = ANIMATE_ITEM_NEAR;
                 potItemAnimations[cauldronSide].animateDirection = cauldronSide;
-                vid[CAULDRON_ID].sprites[playerID].setImage(ingredientToImage(potAnimatingItems[cauldronSide]), 0);
+                vid[CAULDRON_ID].sprites[cauldronSide].setImage(ingredientToImage(potAnimatingItems[cauldronSide]), 0);
             }
         } else if (isConnectedNeighorhood()) {
             // Players want new items
