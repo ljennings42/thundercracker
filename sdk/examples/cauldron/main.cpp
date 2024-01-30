@@ -74,8 +74,8 @@ public:
         VITALITY,
         LOVE,
         FLIGHT,
-        POISONING,
-        DROWSINESS,
+        POISON,
+        SLEEP,
         HASTE,
         LAUGHTER,
         NEUTRAL,
@@ -174,25 +174,27 @@ public:
         }
 
         switch(potMixture) {
-            case VITALITY :
+            case VITALITY:
                 vid[cube].bg1.image(vec(0,0), PotionVitality, 0);
                 break;
-            case LOVE :
+            case LOVE:
                 vid[cube].bg1.image(vec(0,0), PotionLove, 0);
                 break;
-            case POISONING :
+            case POISON:
                 vid[cube].bg1.image(vec(0,0), PotionPoison, 0);
                 break;
-            case DROWSINESS :
+            case SLEEP:
                 vid[cube].bg1.image(vec(0,0), PotionSleep, 0);
                 break;
-            case FLIGHT :
+            case FLIGHT:
                 vid[cube].bg1.image(vec(0,0), PotionFlight, 0);
                 break;
             case HASTE:
                 vid[cube].bg1.image(vec(0,0), PotionHaste, 0);
+                break;
             case LAUGHTER:
                 vid[cube].bg1.image(vec(0,0), PotionLaughter, 0);
+                break;
             case NEUTRAL:
                 vid[cube].bg1.image(vec(0,0), PotionNeutral, 0);
                 break;
@@ -435,8 +437,8 @@ private:
             case VITALITY:      str << "VITALITY"; break;
             case LOVE:          str << "LOVE"; break;
             case FLIGHT:        str << "FLIGHT"; break;
-            case POISONING:     str << "POISON"; break;
-            case DROWSINESS:    str << "SLEEP"; break;
+            case POISON:     str << "POISON"; break;
+            case SLEEP:    str << "SLEEP"; break;
             case HASTE:         str << "HASTE"; break;
             case LAUGHTER:      str << "LAUGHTER"; break;
             case NEUTRAL:       str << "NEUTRAL"; break;
@@ -542,13 +544,13 @@ private:
                 && potContainsIngredient(DRAGONS_BREATH)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
-            potMixture = POISONING;
+            potMixture = POISON;
         } else if (
                 potContainsIngredient(DREAM_CLOUDS)
                 && potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(HARPY_BLOOD)
                 ){
-            potMixture = DROWSINESS;
+            potMixture = SLEEP;
         } else if (
                 potContainsIngredient(GRIFFON_FEATHER)
                 && potContainsIngredient(COFFEE_BEANS)
