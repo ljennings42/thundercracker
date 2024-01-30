@@ -48,6 +48,12 @@ static Vector2<T> lerp(Vector2<T> start, Vector2<T> end, double t) {
     return  result;
 }
 
+static String<MAX_LINE_CHAR> txt_line(const char* chars) {
+    String<MAX_LINE_CHAR> str;
+    str << chars;
+    return str;
+}
+
 class CauldronGame {
 public:
     enum Ingredient {
@@ -290,7 +296,7 @@ public:
         }
     }
 
-    void showText(const char* lines[], unsigned numLines, bool fade, int charRate=1, unsigned hold=100) {
+    void showText(const String<MAX_LINE_CHAR> lines[], unsigned numLines, bool fade, int charRate=1, unsigned hold=100) {
         TextRenderer trs[CUBE_ALLOCATION];
         Colormap *cms[CUBE_ALLOCATION];
 
@@ -437,8 +443,8 @@ private:
             case VITALITY:      str << "VITALITY"; break;
             case LOVE:          str << "LOVE"; break;
             case FLIGHT:        str << "FLIGHT"; break;
-            case POISON:     str << "POISON"; break;
-            case SLEEP:    str << "SLEEP"; break;
+            case POISON:        str << "POISON"; break;
+            case SLEEP:         str << "SLEEP"; break;
             case HASTE:         str << "HASTE"; break;
             case LAUGHTER:      str << "LAUGHTER"; break;
             case NEUTRAL:       str << "NEUTRAL"; break;
@@ -614,25 +620,25 @@ private:
                     bool didMakeCorrectPotion = goalPotion == potMixture;
 
                     goalPotion = gRandom.randint(VITALITY, LAUGHTER);
-                    const char *successLines[] = {
-                            "EXCELLENT!. I CRAVE A",
-                            potionToString(goalPotion),
-                            "POTION NOW",
-                            "please tap to continue..."
+                    String<MAX_LINE_CHAR> successLines[] = {
+                            txt_line("EXCELLENT!. I CRAVE A"),
+                            txt_line(potionToString(goalPotion)),
+                            txt_line("POTION NOW"),
+                            txt_line("please tap to continue...")
                     };
 
-                    const char *failLines[] = {
-                            "FOOL!",
-                            "THATS NOT WHAT I WANTED.",
-                            "BETTER MAKE ME A ",
-                            potionToString(goalPotion),
-                            "POTION. Tap to continue"
+                    String<MAX_LINE_CHAR> failLines[] = {
+                            txt_line("FOOL!"),
+                            txt_line("THATS NOT WHAT I WANTED."),
+                            txt_line("NOW I WANT A "),
+                            txt_line(potionToString(goalPotion)),
+                            txt_line("POTION. Tap to continue...")
                     };
 
                     if (didMakeCorrectPotion) {
-                        showText(successLines, 4, false);
+                        showText(successLines, arraysize(successLines), false);
                     } else {
-                        showText(failLines, 5, false);
+                        showText(failLines, arraysize(failLines), false);
                     }
 
                     // reset game
@@ -776,26 +782,26 @@ private:
     }
 };
 
-const char *introLines[] = {
-        "A patron enters your shop.",
-        "He wants a love potion!",
-        "But it's your first day",
-        "on the job..."
+const String<MAX_LINE_CHAR> introLines[] = {
+        txt_line("A patron enters your shop"),
+        txt_line("He wants a LOVE potion!"),
+        txt_line("But it's your first day"),
+        txt_line("on the job...")
 };
-const char *tutLines1[] = {
-        "Trade ingredients by",
-        "bumping cubes!",
-        "Shake to mix ingredients!"
+const String<MAX_LINE_CHAR> tutLines1[] = {
+        txt_line("Trade ingredients by"),
+        txt_line("bumping cubes!"),
+        txt_line("Shake to mix ingredients!")
 };
-const char *tutLines2[] = {
-        "Put 3 mixed items in ",
-        "the cauldron, shake and",
-        "see what you create!"
+const String<MAX_LINE_CHAR> tutLines2[] = {
+        txt_line("Put 3 mixed items in "),
+        txt_line("the cauldron, shake and"),
+        txt_line("see what you create!")
 };
-const char *tutLines3[] = {
-        "Place all cubes next",
-        "to each other to get",
-        "fresh new items!"
+const String<MAX_LINE_CHAR> tutLines3[] = {
+        txt_line("Place all cubes next"),
+        txt_line("to each other to get"),
+        txt_line("fresh new items!")
 };
 
 void main()
@@ -810,10 +816,10 @@ void main()
     if (!debug) {
         cauldronLoader.load(Cauldron.assetGroup(), AnimationSlot, CUBE_ALLOCATION);
         if (showTextIntro)
-            game.showText(introLines, 4, true, 1);
-            game.showText(tutLines1, 3, false, 3, 150);
-            game.showText(tutLines2, 3, false, 3, 150);
-            game.showText(tutLines3, 3, true, 3);
+            game.showText(introLines, arraysize(introLines), true, 1);
+            game.showText(tutLines1, arraysize(tutLines1), false, 3, 150);
+            game.showText(tutLines2, arraysize(tutLines2), false, 3, 150);
+            game.showText(tutLines3, arraysize(tutLines3), true, 3);
         game.isIntroTextDone = true;
     }
 

@@ -7,6 +7,7 @@
 
 #include <sifteo.h>
 #include "fontdata.h"
+#define MAX_LINE_CHAR 26
 
 using namespace Sifteo;
 
@@ -38,6 +39,6 @@ void playSfx(const AssetAudio&);
 // if drawCentered is true, it will ignore location.x
 void typeText(const char*, TextRenderer*[], const unsigned, Vector2<int>, const AssetAudio&, unsigned textUpdateDelay=2, unsigned charRate=2, bool drawCentered=false);
 
-void typeLines(const char **lines, unsigned numLines, TextRenderer trs[], const unsigned trsCount, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered);
+void typeLines(const String<MAX_LINE_CHAR> lines[], const unsigned numLines, TextRenderer trs[], const unsigned trsCount, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered);
 
 #endif

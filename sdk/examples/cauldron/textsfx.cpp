@@ -2,6 +2,7 @@
 // Created by soda on 1/27/24.
 //
 
+#include <sifteo.h>
 #include "textsfx.h"
 
 using namespace Sifteo;
@@ -133,7 +134,7 @@ void typeText(const char *str, TextRenderer trs[], const unsigned trsCount, Vect
     }
 }
 
-void typeLines(const char **lines, unsigned numLines, TextRenderer trs[], const unsigned trsCount, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered) {
+void typeLines(const String<MAX_LINE_CHAR> lines[], const unsigned numLines, TextRenderer trs[], const unsigned trsCount, Vector2<int> location, const AssetAudio& sfx, unsigned textUpdateDelay, unsigned charRate, bool drawCentered) {
     Vector2<int> loc = location;
     for (int i = 0; i < numLines; i++) {
         typeText(lines[i], trs, trsCount, loc, sfx, textUpdateDelay, charRate, drawCentered);
