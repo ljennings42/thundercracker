@@ -675,17 +675,17 @@ private:
         LOG("Neighbor Remove: %02x:%d - %02x:%d\n", firstID, firstSide, secondID, secondSide);
     }
 
-    bool isConnectedNeighorhood() {
+    bool isConnectedNeighborhood() {
         unsigned connections = 0;
         // to-do: read in PLAYER_TOTAL from command line arg
         for (int id = 1; id < PLAYER_TOTAL; id++) {
             CubeID cube(id);
             Neighborhood nb(cube);
             int total = 0;
-            if (nb.hasNeighborAt(TOP)) total++;
-            if (nb.hasNeighborAt(LEFT)) total++;
-            if (nb.hasNeighborAt(BOTTOM)) total++;
-            if (nb.hasNeighborAt(RIGHT)) total++;
+            if (nb.hasNeighborAt(TOP) && nb.cubeAt(TOP) != CAULDRON_ID) total++;
+            if (nb.hasNeighborAt(LEFT) && nb.cubeAt(LEFT) != CAULDRON_ID) total++;
+            if (nb.hasNeighborAt(BOTTOM) && nb.cubeAt(BOTTOM) != CAULDRON_ID) total++;
+            if (nb.hasNeighborAt(RIGHT) && nb.cubeAt(RIGHT) != CAULDRON_ID) total++;
             // LOG("Connections for Player: %d is %d\n", id, total);
             connections += total;
             // LOG("Total Connections: %d\n", connections);
@@ -741,7 +741,7 @@ private:
                 potItemAnimations[cauldronSide].animateDirection = cauldronSide;
                 vid[CAULDRON_ID].sprites[cauldronSide].setImage(ingredientToImage(potAnimatingItems[cauldronSide]), 0);
             }
-        } else if (isConnectedNeighorhood()) {
+        } else if (isConnectedNeighborhood()) {
             // Players want new items
             LOG("NEIGHBORHOOD IS FULLY CONNECTED\n");
             resetPlayerItems();
