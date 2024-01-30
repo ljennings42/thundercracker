@@ -113,7 +113,7 @@ public:
     Ingredient potAnimatingItems[4] = {};
 
     Potion potMixture;
-    Potion prompt = LOVE;
+    Potion goalPotion = LOVE;
     bool textMode = false;
     bool isIntroTextDone = false;
 
@@ -435,8 +435,8 @@ private:
             case VITALITY:      str << "VITALITY"; break;
             case LOVE:          str << "LOVE"; break;
             case FLIGHT:        str << "FLIGHT"; break;
-            case POISONING:     str << "POISONING"; break;
-            case DROWSINESS:    str << "DROWSINESS"; break;
+            case POISONING:     str << "POISON"; break;
+            case DROWSINESS:    str << "SLEEP"; break;
             case HASTE:         str << "HASTE"; break;
             case LAUGHTER:      str << "LAUGHTER"; break;
             case NEUTRAL:       str << "NEUTRAL"; break;
@@ -608,13 +608,14 @@ private:
                     // cauldron shake
                     performMixIngredients();
                 } else if (tilt.z == -1) {
-                    // empty cauldron and check how player did
-                    clearPotIngredients();
-                    prompt = gRandom.randint(VITALITY, LAUGHTER);
+                    // check how player did
+                    bool didMakeCorrectPotion = goalPotion == potMixture;
+
+                    goalPotion = gRandom.randint(VITALITY, LAUGHTER);
                     const char *successLines[] = {
-                            "EXCELENT!. I CRAVE A ",
-                            potionToString(prompt),
-                            "POTION",
+                            "EXCELLENT!. I CRAVE A",
+                            potionToString(goalPotion),
+                            "POTION NOW",
                             "please tap to continue..."
                     };
 
@@ -622,15 +623,18 @@ private:
                             "FOOL!",
                             "THATS NOT WHAT I WANTED.",
                             "BETTER MAKE ME A ",
-                            potionToString(prompt),
+                            potionToString(goalPotion),
                             "POTION. Tap to continue"
                     };
 
-                    if (prompt == potMixture) {
+                    if (didMakeCorrectPotion) {
                         showText(successLines, 4, false);
                     } else {
                         showText(failLines, 5, false);
                     }
+
+                    // reset game
+                    clearPotIngredients();
                     resetPlayerItems();
                 }
             }
@@ -771,7 +775,7 @@ private:
 };
 
 const char *introLines[] = {
-        "A patron enters your bar.",
+        "A patron enters your shop.",
         "He wants a love potion!",
         "But it's your first day",
         "on the job..."
